@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Robô Branco PRO</title>
+
+<style>
+body{
+    margin:0;
+    background:#020617;
+    color:#fff;
+    font-family:Arial;
+}
+
+/* FUNDO */
+#bg{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+}
+
+/* LAYOUT */
+.container{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    position:relative;
+    z-index:1;
+}
+
+.top{
+    padding:20px;
+    text-align:center;
+    border-bottom:1px solid #222;
+}
+
+.bottom{
+    flex:1;
+    overflow-y:auto;
+}
+
+/* RELÓGIO */
+#hora{
+    font-size:32px;
+    color:#00ffcc;
+}
+
+/* TEXTO */
+.msg{
+    margin-top:15px;
+    font-size:18px;
+    color:#ccc;
+}
+
+/* NEON PULSANDO */
+.neon{
+    font-size:32px;
+    color:#00ffcc;
+    margin:10px;
+    animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+    0%{ text-shadow:0 0 5px #00ffcc; }
+    50%{ text-shadow:0 0 20px #00ffcc, 0 0 40px #00ffcc; }
+    100%{ text-shadow:0 0 5px #00ffcc; }
+}
+
+/* HISTÓRICO */
+#historico{
+    display:flex;
+    overflow-x:auto;
+    gap:10px;
+    padding:10px;
+}
+
+.item{
+    min-width:50px;
+    height:50px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+}
+
+.red{ background:#ff0033; }
+.black{ background:#111; color:#fff; }
+.white{ background:#fff; color:#000; }
+
+/* BOTÕES */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:10px;
+    padding:10px;
+}
+
+button{
+    height:60px;
+    border:none;
+    border-radius:10px;
+    font-size:18px;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="container">
+
+<div class="top">
+    <div id="hora"></div>
+    <div id="res"></div>
+</div>
+
+<div class="bottom">
+    <div id="historico"></div>
+    <div class="grid" id="botoes"></div>
+</div>
+
+</div>
+
+<script>
+
+// ===== VAR =====
+let historico = [];
+
+let ultimaPedra = null;
+let pedraA = null;
+let pedraB = null;
+
+let capturouA = false;
+let capturouB = false;
+
+let ultimoMinutoCalculado = null;
+
+const grid = document.getElementById("botoes");
+
+// ===== BOTÕES =====
+for(let i=0;i<=14;i++){
+    const btn = document.createElement("button");
+    btn.innerText = i;
+
+    if(i===0) btn.className="white";
+    else if(i<=7) btn.className="red";
+    else btn.className="black";
+
+    btn.onclick = ()=> clicar(i);
+    grid.appendChild(btn);
+}
+
+function clicar(num){
+    historico.push(num);
+    if(historico.length > 100) historico.shift();
+
+    ultimaPedra = num;
+    renderHistorico();
+}
+
+// ===== HISTÓRICO =====
+function renderHistorico(){
+    const h = document.getElementById("historico");
+    h.innerHTML = "";
+
+    historico.forEach(n=>{
+        const d = document.createElement("div");
+        d.className = "item " + getCor(n);
+        d.innerText = n;
+        h.appendChild(d);
+    });
+
+    h.scrollLeft = h.scrollWidth;
+}
+
+function getCor(n){
+    if(n===0) return "white";
+    if(n<=7) return "red";
+    return "black";
+}
+
+// ===== RELÓGIO =====
+function getHoraBR(){
+    const now = new Date();
+    const br = new Date(now.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+    return {h:br.getHours(), m:br.getMinutes(), s:br.getSeconds()};
+}
+
+setInterval(()=>{
+
+    const t = getHoraBR();
+
+    document.getElementById("hora").innerText =
+    `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
+
+    // PEDRA 1
+    if(t.s >= 27 && t.s <= 33 && !capturouA){
+        pedraA = ultimaPedra;
+        capturouA = true;
+    }
+
+    // PEDRA 2
+    if((t.s >= 55 && t.s <= 59) || (t.s >= 0 && t.s <= 1)){
+        if(!capturouB){
+            pedraB = ultimaPedra;
+            capturouB = true;
+
+            if(t.m % 10 === 9){
+                if(ultimoMinutoCalculado !== t.m){
+                    ultimoMinutoCalculado = t.m;
+                    calcular(t.h, t.m);
+                }
+            }
+        }
+    }
+
+    // RESET
+    if(t.s === 5){
+        capturouA = false;
+        capturouB = false;
+        pedraA = null;
+        pedraB = null;
+    }
+
+},1000);
+
+// ===== CÁLCULO =====
+function calcular(hora, minuto){
+
+    if(pedraA == null || pedraB == null){
+        document.getElementById("res").innerHTML = "⛔ Sem pedras";
+        return;
+    }
+
+    let base = Math.floor(minuto/10)*10 + 10;
+
+    if(base === 60){
+        base = 0;
+        hora++;
+    }
+
+    function f(h,m){
+        if(m>=60){
+            h += Math.floor(m/60);
+            m %= 60;
+        }
+        return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+    }
+
+    const s1 = f(hora, base + pedraA);
+    const s2 = f(hora, base + pedraB);
+
+    document.getElementById("res").innerHTML = `
+        <div class="msg">Horário dos próximos brancos</div>
+        <div class="neon">⚪ ${s1}</div>
+        <div class="neon">⚪ ${s2}</div>
+        <div class="msg">Margem de erro: 1 minuto para mais e 1 minuto para menos</div>
+    `;
+}
+
+// ===== FUNDO =====
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+let emojis = ["⚪","🔴","⚫"];
+let particles = [];
+
+function criar(){
+    particles.push({
+        x: Math.random()*canvas.width,
+        y: -20,
+        size: Math.random()*18+8,
+        speed: Math.random()*1+0.3,
+        emoji: emojis[Math.floor(Math.random()*3)],
+        alpha: Math.random()*0.3+0.1
+    });
+}
+
+function animar(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(Math.random()<0.08){
+        criar();
+    }
+
+    particles.forEach((p,i)=>{
+        ctx.globalAlpha = p.alpha;
+        ctx.font = p.size+"px Arial";
+        ctx.fillText(p.emoji,p.x,p.y);
+        p.y += p.speed;
+
+        if(p.y > canvas.height){
+            particles.splice(i,1);
+        }
+    });
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animar);
+}
+
+animar();
+
+</script>
+
+</body>
+</html>
