@@ -11,132 +11,97 @@ body{
     color:#fff;
     font-family:Arial;
     overflow:auto;
+    min-height:200vh;
 }
 
-/* FUNDO */
 #bg{
     position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
+    inset:0;
     z-index:0;
     pointer-events:none;
 }
 
-/* LAYOUT */
-.container{
-    display:flex;
-    flex-direction:column;
-    min-height:120vh;
+.top, #historico, .grid{
     position:relative;
-    z-index:1;
+    z-index:2;
 }
 
-/* TOPO */
 .top{
-    padding:20px;
     text-align:center;
-    border-bottom:1px solid #222;
+    padding:20px;
 }
 
-/* TÍTULO */
 .titulo{
-    font-size:36px;
+    font-size:50px;
+    font-weight:bold;
     color:#00ffcc;
-    animation:neonTitle 1.2s infinite alternate;
+    text-shadow:0 0 10px #00ffcc, 0 0 40px #00ffcc;
 }
 
-@keyframes neonTitle{
-    from{ text-shadow:0 0 10px #00ffcc; }
-    to{ text-shadow:0 0 25px #00ffcc, 0 0 50px #00ffcc; }
-}
-
-/* RELÓGIO */
 #hora{
-    font-size:32px;
-    color:#00ffcc;
+    font-size:28px;
     margin-top:10px;
 }
 
-/* TEXTO */
 .msg{
-    margin-top:15px;
-    font-size:18px;
+    margin-top:10px;
     color:#ccc;
 }
 
-/* NEON */
 .neon{
     font-size:32px;
     color:#00ffcc;
-    margin:10px;
     animation:pulse 1s infinite;
 }
 
 @keyframes pulse{
     0%{ text-shadow:0 0 5px #00ffcc; }
-    50%{ text-shadow:0 0 20px #00ffcc, 0 0 40px #00ffcc; }
+    50%{ text-shadow:0 0 20px #00ffcc; }
     100%{ text-shadow:0 0 5px #00ffcc; }
 }
 
-/* HISTÓRICO */
 #historico{
     display:flex;
     overflow-x:auto;
-    gap:10px;
     padding:10px;
+    gap:10px;
 }
 
 .item{
-    min-width:60px;
-    height:60px;
+    width:50px;
+    height:50px;
+    min-width:50px; /* 🔥 não deixa esmagar */
     border-radius:50%;
     display:flex;
     align-items:center;
     justify-content:center;
     font-weight:bold;
-    font-size:18px;
+    flex-shrink:0; /* 🔥 trava tamanho */
 }
 
-.red{ background:#ff0033; }
-.black{ background:#111; color:#fff; }
-.white{ background:#fff; color:#000; }
+.red{background:#ff0033;}
+.black{background:#111;color:#fff;}
+.white{background:#fff;color:#000;}
 
-/* BOTÕES */
 .grid{
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:15px;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
     padding:20px;
 }
 
 button{
-    height:90px;
-    border:none;
-    border-radius:15px;
-    font-size:24px;
-    font-weight:bold;
-}
-
-/* RESET */
-#resetPlacar{
-    margin-top:10px;
-    padding:10px 20px;
+    height:70px;
+    font-size:22px;
     border:none;
     border-radius:10px;
-    background:#ff0033;
-    color:#fff;
-    font-weight:bold;
-    font-size:16px;
 }
 
-/* FOOTER */
-.footer{
-    text-align:center;
-    padding:20px;
-    font-size:14px;
-    color:#666;
+#resetPlacar{
+    margin-top:10px;
+    padding:10px;
+    background:#ff0033;
+    color:#fff;
 }
 </style>
 </head>
@@ -145,132 +110,123 @@ button{
 
 <canvas id="bg"></canvas>
 
-<div class="container">
-
 <div class="top">
-    <div class="titulo">⚪ Robô Branco PRO</div>
+    <div class="titulo">⚪ ROBÔ BRANCO PRO</div>
     <div id="hora"></div>
     <div id="res"></div>
-
     <button id="resetPlacar">🔄 Resetar Placar</button>
 </div>
 
 <div id="historico"></div>
 <div class="grid" id="botoes"></div>
 
-<div class="footer">
-    Desenvolvido por Henrique Sampaio
-</div>
-
-</div>
-
 <script>
 
-// ===== VAR =====
-let historico = [];
-let pedraA = null;
-let pedraB = null;
+let historico=[];
+let pedraA=null;
+let pedraB=null;
+let minutoAtual=null;
 
-let contadorCliques = 0;
-let minutoAtual = null;
+let previsoes=[];
+let verificando=false;
 
-let previsoes = [];
-let verificando = false;
+let greens=0;
+let losses=0;
 
-let greens = 0;
-let losses = 0;
-
-// ===== BOTÕES =====
-const grid = document.getElementById("botoes");
+const grid=document.getElementById("botoes");
 
 for(let i=0;i<=14;i++){
-    const btn = document.createElement("button");
-    btn.innerText = i;
+    let btn=document.createElement("button");
+    btn.innerText=i;
 
-    if(i===0) btn.className="white";
-    else if(i<=7) btn.className="red";
+    if(i===0)btn.className="white";
+    else if(i<=7)btn.className="red";
     else btn.className="black";
 
-    btn.onclick = ()=> clicar(i);
+    btn.onclick=()=>clicar(i);
     grid.appendChild(btn);
 }
 
-// ===== TEMPO =====
 function getHoraBR(){
-    const now = new Date();
-    const br = new Date(now.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {h:br.getHours(), m:br.getMinutes(), s:br.getSeconds()};
+    let d=new Date();
+    let br=new Date(d.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+    return {h:br.getHours(),m:br.getMinutes(),s:br.getSeconds()};
 }
 
-// ===== CLICK =====
 function clicar(num){
 
-    const t = getHoraBR();
+    let t=getHoraBR();
+    let s=t.s;
 
     historico.push(num);
-    if(historico.length > 100) historico.shift();
-
+    if(historico.length>100)historico.shift();
     renderHistorico();
 
-    if(t.m % 10 !== 9){
+    if(t.m%10!==9 && !pedraA){
         verificarResultado(num);
         return;
     }
 
-    if(minutoAtual !== t.m){
-        minutoAtual = t.m;
-        contadorCliques = 0;
-        pedraA = null;
-        pedraB = null;
+    if(minutoAtual!==t.m && !pedraA){
+        minutoAtual=t.m;
+        pedraA=null;
+        pedraB=null;
     }
 
-    contadorCliques++;
+    let pedra1ok = (s>=15 && s<=45);
+    let pedra2ok = (s>=45 || s<=15);
 
-    if(contadorCliques === 1){
-        pedraA = num;
+    if(!pedraA && pedra1ok){
+        pedraA=num;
+
+        document.getElementById("res").innerHTML=`
+        <div class="msg">🧠 Pedra 1 capturada</div>
+        <div class="msg">Aguardando Pedra 2...</div>`;
+        return;
     }
-    else if(contadorCliques === 2){
-        pedraB = num;
-        calcular(t.h, t.m);
+
+    if(pedraA && !pedraB && pedra2ok){
+        pedraB=num;
+        calcular(t.h,t.m);
     }
 
     verificarResultado(num);
 }
 
-// ===== HISTÓRICO =====
 function renderHistorico(){
-    const h = document.getElementById("historico");
-    h.innerHTML = "";
 
-    historico.forEach(n=>{
-        const d = document.createElement("div");
-        d.className = "item " + getCor(n);
-        d.innerText = n;
-        h.appendChild(d);
-    });
+    let h=document.getElementById("historico");
+
+    let n = historico[historico.length - 1];
+
+    let d=document.createElement("div");
+    d.className="item "+getCor(n);
+    d.innerText=n;
+
+    h.appendChild(d);
 
     h.scrollLeft = h.scrollWidth;
+
+    if(h.children.length > 100){
+        h.removeChild(h.firstChild);
+    }
 }
 
 function getCor(n){
-    if(n===0) return "white";
-    if(n<=7) return "red";
-    return "black";
+    if(n===0)return"white";
+    if(n<=7)return"red";
+    return"black";
 }
 
-// ===== RELÓGIO =====
 setInterval(()=>{
-    const t = getHoraBR();
-
-    document.getElementById("hora").innerText =
+    let t=getHoraBR();
+    document.getElementById("hora").innerText=
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
-
 },1000);
 
-// ===== CALCULAR =====
-function calcular(hora, minuto){
+function calcular(hora,minuto){
 
-    let base = Math.floor(minuto/10)*10 + 10;
+    let base = Math.ceil(minuto / 10) * 10;
 
     if(base === 60){
         base = 0;
@@ -278,149 +234,126 @@ function calcular(hora, minuto){
     }
 
     function f(h,m){
-        if(m>=60){
-            h += Math.floor(m/60);
-            m %= 60;
-        }
+        if(m>=60){h+=Math.floor(m/60);m%=60;}
         return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     }
 
-    const s1 = f(hora, base + pedraA);
-    const s2 = f(hora, base + pedraB);
+    let s1=f(hora,base+pedraA);
+    let s2=f(hora,base+pedraB);
 
-    previsoes = [s1, s2];
-    verificando = true;
+    previsoes=[s1,s2];
+    verificando=true;
 
-    document.getElementById("res").innerHTML = `
-        <div class="msg">🚨 SINAL IDENTIFICADO</div>
-        <div class="neon">⚪ ENTRAR NO BRANCO</div>
-        <div class="msg">⏰ Possíveis horários:</div>
-        <div class="neon">⚪ ${s1}</div>
-        <div class="neon">⚪ ${s2}</div>
-        <div class="msg">⚠️ Margem de erro: ±1 minuto</div>
-        <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
-    `;
+    document.getElementById("res").innerHTML=`
+    <div class="msg">🚨 SINAL IDENTIFICADO</div>
+    <div class="neon">⚪ ENTRAR NO BRANCO</div>
+    <div class="msg">⏰ ${s1}</div>
+    <div class="msg">⏰ ${s2}</div>
+    <div class="msg">📊 🟢 ${greens} | 🔴 ${losses}</div>`;
 }
 
-// ===== VERIFICAR RESULTADO =====
 function verificarResultado(num){
 
-    if(!verificando) return;
+    if(!verificando)return;
 
-    const t = getHoraBR();
-    const agora = `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}`;
+    if(num===0){
+        greens++;
+        verificando=false;
 
-    if(num === 0){
-
-        for(let horario of previsoes){
-
-            let [h,m] = horario.split(":").map(Number);
-
-            for(let i=-1;i<=1;i++){
-
-                let mm = m + i;
-                let hh = h;
-
-                if(mm < 0){ mm += 60; hh--; }
-                if(mm >= 60){ mm -= 60; hh++; }
-
-                let teste = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
-
-                if(teste === agora){
-                    greens++;
-                    verificando = false;
-
-                    document.getElementById("res").innerHTML += `
-                        <div class="neon" style="font-size:50px;color:#00ff00">
-                            🟢 GREEN
-                        </div>
-                        <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
-                    `;
-                    return;
-                }
-            }
-        }
+        document.getElementById("res").innerHTML+=`
+        <div class="neon" style="font-size:50px;color:#00ff00">🟢 GREEN</div>`;
+        return;
     }
 
-    let ultimo = previsoes[1];
-    let [h,m] = ultimo.split(":").map(Number);
+    let t=getHoraBR();
+    let [h,m]=previsoes[1].split(":").map(Number);
 
-    let limite = new Date();
+    let limite=new Date();
     limite.setHours(h);
-    limite.setMinutes(m + 1);
+    limite.setMinutes(m+1);
 
-    let agoraDate = new Date();
-    agoraDate.setHours(t.h);
-    agoraDate.setMinutes(t.m);
+    let agora=new Date();
+    agora.setHours(t.h);
+    agora.setMinutes(t.m);
 
-    if(agoraDate > limite){
+    if(agora>limite){
         losses++;
-        verificando = false;
+        verificando=false;
 
-        document.getElementById("res").innerHTML += `
-            <div class="neon" style="font-size:50px;color:#ff0033">
-                🔴 LOSS
-            </div>
-            <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
-        `;
+        document.getElementById("res").innerHTML+=`
+        <div class="neon" style="font-size:50px;color:#ff0033">🔴 LOSS</div>`;
     }
 }
 
-// ===== RESET =====
-document.getElementById("resetPlacar").onclick = function(){
-    greens = 0;
-    losses = 0;
-
-    document.getElementById("res").innerHTML = `
-        <div class="msg">📊 Placar resetado</div>
-        <div class="msg">🟢 ${greens} | 🔴 ${losses}</div>
-    `;
+document.getElementById("resetPlacar").onclick=()=>{
+    greens=0;
+    losses=0;
+    document.getElementById("res").innerHTML="Placar resetado";
 };
 
-// ===== FUNDO =====
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
+// FUNDO
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
 
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
 }
 resize();
-window.addEventListener("resize", resize);
+window.addEventListener("resize",resize);
 
-let emojis = ["⚪","🔴","⚫"];
-let particles = [];
+let bolas=[];
+let textos=[];
 
-function criar(){
-    particles.push({
-        x: Math.random()*canvas.width,
-        y: -20,
-        size: Math.random()*18+8,
-        speed: Math.random()*1+0.3,
-        emoji: emojis[Math.floor(Math.random()*3)],
-        alpha: Math.random()*0.3+0.1
+function criarBola(){
+    bolas.push({
+        x:Math.random()*canvas.width,
+        y:-20,
+        size:Math.random()*12+6,
+        speed:Math.random()*0.7+0.3,
+        alpha:Math.random()*0.4+0.2
+    });
+}
+
+function criarTexto(){
+    textos.push({
+        x:Math.random()*canvas.width*0.7 + 50,
+        y:-40,
+        size:24,
+        speed:0.35,
+        alpha:0.2,
+        text:"GREENS BRANCO 🤑"
     });
 }
 
 function animar(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    if(Math.random()<0.08){
-        criar();
-    }
+    if(Math.random()<0.25) criarBola();
+    if(Math.random()<0.02) criarTexto();
 
-    particles.forEach((p,i)=>{
-        ctx.globalAlpha = p.alpha + 0.4;
-        ctx.font = p.size+"px Arial";
-        ctx.fillText(p.emoji,p.x,p.y);
-        p.y += p.speed;
+    bolas.forEach((b,i)=>{
+        ctx.globalAlpha=b.alpha;
+        ctx.beginPath();
+        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
+        ctx.fillStyle="#fff";
+        ctx.fill();
+        b.y+=b.speed;
 
-        if(p.y > canvas.height){
-            particles.splice(i,1);
-        }
+        if(b.y>canvas.height) bolas.splice(i,1);
     });
 
-    ctx.globalAlpha = 1;
+    textos.forEach((t,i)=>{
+        ctx.globalAlpha=t.alpha;
+        ctx.font="600 "+t.size+"px Arial";
+        ctx.fillStyle="#fff";
+        ctx.fillText(t.text,t.x,t.y);
+        t.y+=t.speed;
+
+        if(t.y>canvas.height) textos.splice(i,1);
+    });
+
+    ctx.globalAlpha=1;
     requestAnimationFrame(animar);
 }
 
