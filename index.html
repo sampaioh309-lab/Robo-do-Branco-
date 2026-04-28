@@ -10,6 +10,7 @@ body{
     background:#020617;
     color:#fff;
     font-family:Arial;
+    overflow:auto;
 }
 
 /* FUNDO */
@@ -20,32 +21,42 @@ body{
     width:100%;
     height:100%;
     z-index:0;
+    pointer-events:none;
 }
 
 /* LAYOUT */
 .container{
     display:flex;
     flex-direction:column;
-    min-height:100vh;
+    min-height:120vh;
     position:relative;
     z-index:1;
 }
 
+/* TOPO */
 .top{
     padding:20px;
     text-align:center;
     border-bottom:1px solid #222;
 }
 
-.bottom{
-    flex:1;
-    overflow-y:auto;
+/* TÍTULO */
+.titulo{
+    font-size:36px;
+    color:#00ffcc;
+    animation:neonTitle 1.2s infinite alternate;
+}
+
+@keyframes neonTitle{
+    from{ text-shadow:0 0 10px #00ffcc; }
+    to{ text-shadow:0 0 25px #00ffcc, 0 0 50px #00ffcc; }
 }
 
 /* RELÓGIO */
 #hora{
     font-size:32px;
     color:#00ffcc;
+    margin-top:10px;
 }
 
 /* TEXTO */
@@ -55,7 +66,7 @@ body{
     color:#ccc;
 }
 
-/* NEON PULSANDO */
+/* NEON */
 .neon{
     font-size:32px;
     color:#00ffcc;
@@ -78,13 +89,14 @@ body{
 }
 
 .item{
-    min-width:50px;
-    height:50px;
+    min-width:60px;
+    height:60px;
     border-radius:50%;
     display:flex;
     align-items:center;
     justify-content:center;
     font-weight:bold;
+    font-size:18px;
 }
 
 .red{ background:#ff0033; }
@@ -94,17 +106,37 @@ body{
 /* BOTÕES */
 .grid{
     display:grid;
-    grid-template-columns:repeat(5, 1fr);
-    gap:10px;
-    padding:10px;
+    grid-template-columns:repeat(3, 1fr);
+    gap:15px;
+    padding:20px;
 }
 
 button{
-    height:60px;
+    height:90px;
+    border:none;
+    border-radius:15px;
+    font-size:24px;
+    font-weight:bold;
+}
+
+/* RESET */
+#resetPlacar{
+    margin-top:10px;
+    padding:10px 20px;
     border:none;
     border-radius:10px;
-    font-size:18px;
+    background:#ff0033;
+    color:#fff;
     font-weight:bold;
+    font-size:16px;
+}
+
+/* FOOTER */
+.footer{
+    text-align:center;
+    padding:20px;
+    font-size:14px;
+    color:#666;
 }
 </style>
 </head>
@@ -116,13 +148,18 @@ button{
 <div class="container">
 
 <div class="top">
+    <div class="titulo">⚪ Robô Branco PRO</div>
     <div id="hora"></div>
     <div id="res"></div>
+
+    <button id="resetPlacar">🔄 Resetar Placar</button>
 </div>
 
-<div class="bottom">
-    <div id="historico"></div>
-    <div class="grid" id="botoes"></div>
+<div id="historico"></div>
+<div class="grid" id="botoes"></div>
+
+<div class="footer">
+    Desenvolvido por Henrique Sampaio
 </div>
 
 </div>
@@ -131,19 +168,21 @@ button{
 
 // ===== VAR =====
 let historico = [];
-
-let ultimaPedra = null;
 let pedraA = null;
 let pedraB = null;
 
-let capturouA = false;
-let capturouB = false;
+let contadorCliques = 0;
+let minutoAtual = null;
 
-let ultimoMinutoCalculado = null;
+let previsoes = [];
+let verificando = false;
 
-const grid = document.getElementById("botoes");
+let greens = 0;
+let losses = 0;
 
 // ===== BOTÕES =====
+const grid = document.getElementById("botoes");
+
 for(let i=0;i<=14;i++){
     const btn = document.createElement("button");
     btn.innerText = i;
@@ -156,12 +195,46 @@ for(let i=0;i<=14;i++){
     grid.appendChild(btn);
 }
 
+// ===== TEMPO =====
+function getHoraBR(){
+    const now = new Date();
+    const br = new Date(now.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+    return {h:br.getHours(), m:br.getMinutes(), s:br.getSeconds()};
+}
+
+// ===== CLICK =====
 function clicar(num){
+
+    const t = getHoraBR();
+
     historico.push(num);
     if(historico.length > 100) historico.shift();
 
-    ultimaPedra = num;
     renderHistorico();
+
+    if(t.m % 10 !== 9){
+        verificarResultado(num);
+        return;
+    }
+
+    if(minutoAtual !== t.m){
+        minutoAtual = t.m;
+        contadorCliques = 0;
+        pedraA = null;
+        pedraB = null;
+    }
+
+    contadorCliques++;
+
+    if(contadorCliques === 1){
+        pedraA = num;
+    }
+    else if(contadorCliques === 2){
+        pedraB = num;
+        calcular(t.h, t.m);
+    }
+
+    verificarResultado(num);
 }
 
 // ===== HISTÓRICO =====
@@ -186,57 +259,16 @@ function getCor(n){
 }
 
 // ===== RELÓGIO =====
-function getHoraBR(){
-    const now = new Date();
-    const br = new Date(now.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {h:br.getHours(), m:br.getMinutes(), s:br.getSeconds()};
-}
-
 setInterval(()=>{
-
     const t = getHoraBR();
 
     document.getElementById("hora").innerText =
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
 
-    // PEDRA 1
-    if(t.s >= 27 && t.s <= 33 && !capturouA){
-        pedraA = ultimaPedra;
-        capturouA = true;
-    }
-
-    // PEDRA 2
-    if((t.s >= 55 && t.s <= 59) || (t.s >= 0 && t.s <= 1)){
-        if(!capturouB){
-            pedraB = ultimaPedra;
-            capturouB = true;
-
-            if(t.m % 10 === 9){
-                if(ultimoMinutoCalculado !== t.m){
-                    ultimoMinutoCalculado = t.m;
-                    calcular(t.h, t.m);
-                }
-            }
-        }
-    }
-
-    // RESET
-    if(t.s === 5){
-        capturouA = false;
-        capturouB = false;
-        pedraA = null;
-        pedraB = null;
-    }
-
 },1000);
 
-// ===== CÁLCULO =====
+// ===== CALCULAR =====
 function calcular(hora, minuto){
-
-    if(pedraA == null || pedraB == null){
-        document.getElementById("res").innerHTML = "⛔ Sem pedras";
-        return;
-    }
 
     let base = Math.floor(minuto/10)*10 + 10;
 
@@ -256,13 +288,94 @@ function calcular(hora, minuto){
     const s1 = f(hora, base + pedraA);
     const s2 = f(hora, base + pedraB);
 
+    previsoes = [s1, s2];
+    verificando = true;
+
     document.getElementById("res").innerHTML = `
-        <div class="msg">Horário dos próximos brancos</div>
+        <div class="msg">🚨 SINAL IDENTIFICADO</div>
+        <div class="neon">⚪ ENTRAR NO BRANCO</div>
+        <div class="msg">⏰ Possíveis horários:</div>
         <div class="neon">⚪ ${s1}</div>
         <div class="neon">⚪ ${s2}</div>
-        <div class="msg">Margem de erro: 1 minuto para mais e 1 minuto para menos</div>
+        <div class="msg">⚠️ Margem de erro: ±1 minuto</div>
+        <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
     `;
 }
+
+// ===== VERIFICAR RESULTADO =====
+function verificarResultado(num){
+
+    if(!verificando) return;
+
+    const t = getHoraBR();
+    const agora = `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}`;
+
+    if(num === 0){
+
+        for(let horario of previsoes){
+
+            let [h,m] = horario.split(":").map(Number);
+
+            for(let i=-1;i<=1;i++){
+
+                let mm = m + i;
+                let hh = h;
+
+                if(mm < 0){ mm += 60; hh--; }
+                if(mm >= 60){ mm -= 60; hh++; }
+
+                let teste = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+
+                if(teste === agora){
+                    greens++;
+                    verificando = false;
+
+                    document.getElementById("res").innerHTML += `
+                        <div class="neon" style="font-size:50px;color:#00ff00">
+                            🟢 GREEN
+                        </div>
+                        <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
+                    `;
+                    return;
+                }
+            }
+        }
+    }
+
+    let ultimo = previsoes[1];
+    let [h,m] = ultimo.split(":").map(Number);
+
+    let limite = new Date();
+    limite.setHours(h);
+    limite.setMinutes(m + 1);
+
+    let agoraDate = new Date();
+    agoraDate.setHours(t.h);
+    agoraDate.setMinutes(t.m);
+
+    if(agoraDate > limite){
+        losses++;
+        verificando = false;
+
+        document.getElementById("res").innerHTML += `
+            <div class="neon" style="font-size:50px;color:#ff0033">
+                🔴 LOSS
+            </div>
+            <div class="msg">📊 Placar: 🟢 ${greens} | 🔴 ${losses}</div>
+        `;
+    }
+}
+
+// ===== RESET =====
+document.getElementById("resetPlacar").onclick = function(){
+    greens = 0;
+    losses = 0;
+
+    document.getElementById("res").innerHTML = `
+        <div class="msg">📊 Placar resetado</div>
+        <div class="msg">🟢 ${greens} | 🔴 ${losses}</div>
+    `;
+};
 
 // ===== FUNDO =====
 const canvas = document.getElementById("bg");
@@ -297,7 +410,7 @@ function animar(){
     }
 
     particles.forEach((p,i)=>{
-        ctx.globalAlpha = p.alpha;
+        ctx.globalAlpha = p.alpha + 0.4;
         ctx.font = p.size+"px Arial";
         ctx.fillText(p.emoji,p.x,p.y);
         p.y += p.speed;
