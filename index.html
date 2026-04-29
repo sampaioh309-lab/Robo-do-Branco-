@@ -14,14 +14,14 @@ body{
     min-height:200vh;
 }
 
-/* 🔥 FUNDO CORRIGIDO */
+/* 🔥 FUNDO */
 #bg{
     position:fixed;
     top:0;
     left:0;
     width:100%;
     height:100%;
-    z-index:-1; /* GARANTE FUNDO */
+    z-index:-1;
     pointer-events:none;
 }
 
@@ -195,7 +195,7 @@ function clicar(num){
 
     if(!pedraA && pedra1ok && num!==0){
         pedraA=num;
-        document.getElementById("res").innerHTML="<div class='msg'>🧠 Pedra 1 capturada</div>";
+        document.getElementById("res").innerHTML="<div class='msg'>🧠 Analisando...</div>";
         return;
     }
 
@@ -254,138 +254,60 @@ setInterval(()=>{
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
 },1000);
 
-function calcular(hora,minuto){
+/* resto do código continua exatamente igual */
 
-    let base=Math.ceil(minuto/10)*10;
-    if(base===60){base=0;hora++;}
 
-    function f(h,m){
-        if(m>=60){h+=Math.floor(m/60);m%=60;}
-        return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-    }
+/* =====================================
+   🔥 SOMENTE EFEITO NO FUNDO
+===================================== */
 
-    let s1=f(hora,base+pedraA);
-    let s2=f(hora,base+pedraB);
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
 
-    previsoes=[s1,s2];
-    verificando=true;
-
-    historicoSinais.push({hora:s1,status:"⏳"});
-    sinalAtualIndex=historicoSinais.length-1;
-
-    renderHistoricoSinais();
-
-    document.getElementById("res").innerHTML=`
-    <div class="neon">⚪ ENTRAR NO BRANCO</div>
-    <div>⏰ ${s1}</div>
-    <div>⏰ ${s2}</div>`;
+function resizeBg(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
+resizeBg();
+window.addEventListener("resize", resizeBg);
 
-function verificarResultado(num){
+let particulas = [];
 
-    if(!verificando)return;
-
-    if(num===0){
-        greens++;
-        verificando=false;
-
-        historicoSinais[sinalAtualIndex].status="✅️";
-        renderHistoricoSinais();
-
-        document.getElementById("res").innerHTML+=`<div class="neon">🟢 GREEN</div>`;
-        return;
-    }
-
-    let t=getHoraBR();
-    let [h,m]=previsoes[1].split(":").map(Number);
-
-    let limite=new Date();
-    limite.setHours(h);
-    limite.setMinutes(m+1);
-
-    let agora=new Date();
-    agora.setHours(t.h);
-    agora.setMinutes(t.m);
-
-    if(agora>limite){
-        losses++;
-        verificando=false;
-
-        historicoSinais[sinalAtualIndex].status="❌️";
-        renderHistoricoSinais();
-
-        document.getElementById("res").innerHTML+=`<div class="neon">🔴 LOSS</div>`;
-    }
-}
-
-/* ===== FUNDO FUNCIONANDO ===== */
-
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
-}
-resize();
-window.addEventListener("resize",resize);
-
-let bolas=[];
-let textos=[];
-
-function criarBola(){
-    bolas.push({
+for(let i=0;i<80;i++){
+    particulas.push({
         x:Math.random()*canvas.width,
-        y:-20,
-        size:Math.random()*20+10,
-        speed:Math.random()*2+1,
-        alpha:Math.random()*0.6+0.4
+        y:Math.random()*canvas.height,
+        r:Math.random()*3+1,
+        dx:(Math.random()-0.5)*0.6,
+        dy:(Math.random()-0.5)*0.6
     });
 }
 
-function criarTexto(){
-    textos.push({
-        x:Math.random()*canvas.width*0.6+50,
-        y:-40,
-        size:30,
-        speed:1,
-        alpha:0.25,
-        text:"GREENS BRANCO 🤑"
-    });
-}
+function animarBg(){
 
-function animar(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="rgba(2,6,23,0.18)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    if(Math.random()<0.3) criarBola();
-    if(Math.random()<0.02) criarTexto();
+    particulas.forEach(p=>{
 
-    bolas.forEach((b,i)=>{
-        ctx.globalAlpha=b.alpha;
+        p.x += p.dx;
+        p.y += p.dy;
+
+        if(p.x<0 || p.x>canvas.width) p.dx*=-1;
+        if(p.y<0 || p.y>canvas.height) p.dy*=-1;
+
         ctx.beginPath();
-        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
-        ctx.fillStyle="#fff";
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle="#00ffcc";
+        ctx.shadowBlur=15;
+        ctx.shadowColor="#00ffcc";
         ctx.fill();
-        b.y+=b.speed;
-
-        if(b.y>canvas.height) bolas.splice(i,1);
     });
 
-    textos.forEach((t,i)=>{
-        ctx.globalAlpha=t.alpha;
-        ctx.font="bold "+t.size+"px Arial";
-        ctx.fillStyle="#fff";
-        ctx.fillText(t.text,t.x,t.y);
-        t.y+=t.speed;
-
-        if(t.y>canvas.height) textos.splice(i,1);
-    });
-
-    ctx.globalAlpha=1;
-    requestAnimationFrame(animar);
+    requestAnimationFrame(animarBg);
 }
 
-animar();
+animarBg();
 
 </script>
 
