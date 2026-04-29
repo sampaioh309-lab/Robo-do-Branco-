@@ -132,11 +132,11 @@ button{
 let historico=[];
 let pedraA=null;
 let pedraB=null;
-let minutoAtual=null;
 
 let previsoes=[];
 let verificando=false;
 let sinalGerado=false;
+let cicloAtivo=false;
 
 let greens=0;
 let losses=0;
@@ -178,40 +178,37 @@ function clicar(num){
     if(historico.length>100) historico.shift();
     renderHistorico();
 
-    if(minutoAtual!==t.m){
-        minutoAtual=t.m;
-        pedraA=null;
-        pedraB=null;
-        sinalGerado=false;
-    }
-
     if(num===0){
         verificarResultado(num);
         return;
     }
 
-    if(t.m%10!==9 || sinalGerado){
+    let pedra1ok = (s >= 15 && s < 45);
+    let pedra2ok = (s >= 45 && s <= 59) || (s >= 0 && s <= 15);
+
+    if(t.m % 10 !== 9 && !cicloAtivo){
         verificarResultado(num);
         return;
     }
 
-    let pedra1ok=(s>=15 && s<=45);
-    let pedra2ok=(s>=45 || s<=15);
+    if(!cicloAtivo && pedra1ok){
+        pedraA = num;
+        cicloAtivo = true;
 
-    /* PEDRA 1 */
-    if(!pedraA && pedra1ok){
-        pedraA=num;
-
-        document.getElementById("res").innerHTML=`
-        <div class="msg">🧠 Analisando...</div>`;
+        document.getElementById("res").innerHTML = `
+        <div class="msg">🧠 Pedra 1 (${num})</div>`;
         return;
     }
 
-    /* PEDRA 2 */
-    if(pedraA && !pedraB && pedra2ok){
-        pedraB=num;
+    if(cicloAtivo && pedraA !== null && pedraB === null && pedra2ok){
+        pedraB = num;
+
+        document.getElementById("res").innerHTML = `
+        <div class="msg">🧠 Pedra 2 (${num})</div>`;
+
         calcular(t.h,t.m);
-        sinalGerado=true;
+        sinalGerado = true;
+        cicloAtivo = false;
     }
 
     verificarResultado(num);
@@ -262,7 +259,7 @@ setInterval(()=>{
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
 },1000);
 
-/* CALCULAR SINAL */
+/* CALCULAR */
 function calcular(hora,minuto){
 
     let base=Math.ceil(minuto/10)*10;
@@ -304,46 +301,78 @@ function calcular(hora,minuto){
     <div class="msg">📊 🟢 ${greens} | 🔴 ${losses}</div>`;
 }
 
+/* 🔥 AQUI FOI A MUDANÇA QUE VOCÊ PEDIU */
 function verificarResultado(num){
 
     if(!verificando) return;
 
-    if(num===0){
-        greens++;
-        verificando=false;
-
-        if(sinalAtualIndex!==null){
-            historicoSinais[sinalAtualIndex].status="🟢 GREEN";
-            renderHistoricoSinais();
-        }
-
-        document.getElementById("res").innerHTML+=`
-        <div class="neon" style="font-size:50px;color:#00ff00">🟢 GREEN</div>`;
-        return;
-    }
-
     let t=getHoraBR();
-    let [h,m]=previsoes[1].split(":").map(Number);
 
-    let limite=new Date();
-    limite.setHours(h);
-    limite.setMinutes(m+1);
-    limite.setSeconds(0);
+    function toDate(h,m){
+        let d=new Date();
+        d.setHours(h);
+        d.setMinutes(m);
+        d.setSeconds(0);
+        return d;
+    }
 
     let agora=new Date();
     agora.setHours(t.h);
     agora.setMinutes(t.m);
     agora.setSeconds(t.s);
 
+    let dentro=false;
+
+    previsoes.forEach(p=>{
+        let [h,m]=p.split(":").map(Number);
+
+        let inicio=toDate(h,m-1);
+        let fim=toDate(h,m+1);
+
+        if(agora>=inicio && agora<=fim){
+            dentro=true;
+        }
+    });
+
+    if(num===0){
+
+        if(dentro){
+            greens++;
+            historicoSinais[sinalAtualIndex].status="🟢 GREEN";
+        }else{
+            losses++;
+            historicoSinais[sinalAtualIndex].status="🔴 LOSS (fora da janela)";
+        }
+
+        renderHistoricoSinais();
+
+        pedraA=null;
+        pedraB=null;
+        sinalGerado=false;
+        verificando=false;
+
+        document.getElementById("res").innerHTML+=`
+        <div class="neon" style="font-size:50px;color:${dentro?'#00ff00':'#ff0033'}">
+        ${dentro?'🟢 GREEN':'🔴 LOSS'}
+        </div>`;
+
+        return;
+    }
+
+    let [h2,m2]=previsoes[1].split(":").map(Number);
+    let limite=toDate(h2,m2+1);
+
     if(agora>limite){
 
         losses++;
         verificando=false;
 
-        if(sinalAtualIndex!==null){
-            historicoSinais[sinalAtualIndex].status="🔴 LOSS";
-            renderHistoricoSinais();
-        }
+        historicoSinais[sinalAtualIndex].status="🔴 LOSS";
+        renderHistoricoSinais();
+
+        pedraA=null;
+        pedraB=null;
+        sinalGerado=false;
 
         document.getElementById("res").innerHTML+=`
         <div class="neon" style="font-size:50px;color:#ff0033">🔴 LOSS</div>`;
@@ -426,6 +455,5 @@ function animar(){
 animar();
 
 </script>
-
 </body>
-</html>
+    </html>
