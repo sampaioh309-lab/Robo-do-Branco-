@@ -39,14 +39,14 @@ body{
 }
 
 .titulo{
-    font-size:40px;
+    font-size:50px;
     font-weight:bold;
     color:#00ffcc;
     text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;
 }
 
 #hora{
-    font-size:24px;
+    font-size:28px;
     margin-top:10px;
 }
 
@@ -56,7 +56,7 @@ body{
 }
 
 .neon{
-    font-size:28px;
+    font-size:32px;
     color:#00ffcc;
     animation:pulse 1s infinite;
 }
@@ -83,11 +83,27 @@ body{
     align-items:center;
     justify-content:center;
     font-weight:bold;
+    flex-shrink:0;
 }
 
-.red{background:#ff0033;}
-.black{background:#111;}
-.white{background:#fff;color:#000;}
+/* 🔥 BOTÕES CORRIGIDOS */
+.red{
+    background:#ff0033;
+    color:#fff;
+    font-weight:900;
+}
+
+.black{
+    background:#111;
+    color:#fff;
+    font-weight:900;
+}
+
+.white{
+    background:#fff;
+    color:#000;
+    font-weight:900;
+}
 
 .grid{
     display:grid;
@@ -97,8 +113,9 @@ body{
 }
 
 button{
-    height:60px;
-    font-size:18px;
+    height:70px;
+    font-size:22px;
+    font-weight:900;
     border:none;
     border-radius:10px;
 }
@@ -120,7 +137,7 @@ button{
 
 #historicoSinais{
     padding:10px 20px;
-    font-size:16px;
+    font-size:18px;
     color:#00ffcc;
 }
 </style>
@@ -135,7 +152,7 @@ button{
     <div id="hora"></div>
     <div id="res"></div>
 
-    <button id="resetPlacar">🔄 Resetar</button>
+    <button id="resetPlacar">🔄 Resetar Placar</button>
     <button id="instalarApp">📲 Instalar App</button>
 </div>
 
@@ -178,14 +195,22 @@ document.getElementById("instalarApp").onclick = async ()=>{
 };
 
 /* LÓGICA ORIGINAL */
-let historico=[],pedraA=null,pedraB=null;
-let previsoes=[],verificando=false;
-let greens=0,losses=0;
-let historicoSinais=[],sinalAtualIndex=null;
+let historico=[];
+let pedraA=null;
+let pedraB=null;
+let previsoes=[];
+let verificando=false;
 let cicloAtivo=false;
+
+let greens=0;
+let losses=0;
+
+let historicoSinais=[];
+let sinalAtualIndex=null;
 
 const grid=document.getElementById("botoes");
 
+/* BOTÕES */
 for(let i=0;i<=14;i++){
     let btn=document.createElement("button");
     btn.innerText=i;
@@ -201,13 +226,19 @@ for(let i=0;i<=14;i++){
 function getHoraBR(){
     let d=new Date();
     let br=new Date(d.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {h:br.getHours(),m:br.getMinutes(),s:br.getSeconds()};
+    return {
+        h:br.getHours(),
+        m:br.getMinutes(),
+        s:br.getSeconds()
+    };
 }
 
 function clicar(num){
+
     let t=getHoraBR();
 
     historico.push(num);
+    if(historico.length>100) historico.shift();
     renderHistorico();
 
     if(num===0){
@@ -219,15 +250,15 @@ function clicar(num){
     let pedra2ok = (t.s >= 45 || t.s <= 15);
 
     if(!cicloAtivo && pedra1ok){
-        pedraA=num;
-        cicloAtivo=true;
+        pedraA = num;
+        cicloAtivo = true;
         return;
     }
 
-    if(cicloAtivo && pedraB===null && pedra2ok){
-        pedraB=num;
+    if(cicloAtivo && pedraB === null && pedra2ok){
+        pedraB = num;
         calcular(t.h,t.m);
-        cicloAtivo=false;
+        cicloAtivo = false;
     }
 
     verificarResultado(num);
@@ -243,17 +274,29 @@ function renderHistorico(){
 
     h.appendChild(d);
     h.scrollLeft=h.scrollWidth;
+
+    if(h.children.length>100){
+        h.removeChild(h.firstChild);
+    }
 }
 
-/* CALCULO + ALERTA */
+/* CALCULAR + ALERTA */
 function calcular(hora,minuto){
 
     let base=Math.ceil(minuto/10)*10;
-    if(base===60){base=0;hora++;}
+
+    if(base===60){
+        base=0;
+        hora++;
+    }
 
     function f(h,m){
-        if(m>=60){h+=Math.floor(m/60);m%=60;}
-        if(h>=24)h%=24;
+        if(m>=60){
+            h+=Math.floor(m/60);
+            m%=60;
+        }
+        if(h>=24) h%=24;
+
         return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     }
 
@@ -263,9 +306,10 @@ function calcular(hora,minuto){
     previsoes=[s1,s2];
     verificando=true;
 
-    /* ALERTA 2 MIN */
+    /* 🔔 ALERTA 2 MINUTOS */
     previsoes.forEach(p=>{
         let [h,m]=p.split(":").map(Number);
+
         let alerta=new Date();
         alerta.setHours(h);
         alerta.setMinutes(m-2);
@@ -281,22 +325,79 @@ function calcular(hora,minuto){
     });
 
     document.getElementById("res").innerHTML=`
+    <div class="msg">🚨 SINAL IDENTIFICADO</div>
     <div class="neon">⚪ ENTRAR NO BRANCO</div>
-    <div>${s1}</div>
-    <div>${s2}</div>
-    `;
+    <div class="msg">⏰ ${s1}</div>
+    <div class="msg">⏰ ${s2}</div>
+    <div class="msg">📊 🟢 ${greens} | 🔴 ${losses}</div>`;
 }
 
 function verificarResultado(num){
-    if(!verificando)return;
+
+    if(!verificando) return;
 
     if(num===0){
         greens++;
         verificando=false;
-        document.getElementById("res").innerHTML+=`<div class="neon">🟢 GREEN</div>`;
+
+        document.getElementById("res").innerHTML+=`
+        <div class="neon" style="color:#00ff00">🟢 GREEN</div>`;
     }
 }
 
+/* RESET */
+document.getElementById("resetPlacar").onclick=()=>{
+    greens=0;
+    losses=0;
+    document.getElementById("res").innerHTML="Placar resetado";
+};
+
+/* 🔥 FUNDO ANIMADO (MANTIDO) */
+const canvas=document.getElementById("bg");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+}
+resize();
+window.addEventListener("resize",resize);
+
+let bolas=[];
+
+function criarBola(){
+    bolas.push({
+        x:Math.random()*canvas.width,
+        y:-20,
+        size:Math.random()*12+6,
+        speed:Math.random()*0.7+0.3,
+        alpha:Math.random()*0.4+0.2
+    });
+}
+
+function animar(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(Math.random()<0.25) criarBola();
+
+    bolas.forEach((b,i)=>{
+        ctx.globalAlpha=b.alpha;
+        ctx.beginPath();
+        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
+        ctx.fillStyle="#fff";
+        ctx.fill();
+        b.y+=b.speed;
+
+        if(b.y>canvas.height) bolas.splice(i,1);
+    });
+
+    ctx.globalAlpha=1;
+    requestAnimationFrame(animar);
+}
+
+animar();
+
 </script>
 </body>
-</html>
+    </html>
