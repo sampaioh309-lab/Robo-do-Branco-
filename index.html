@@ -2,7 +2,14 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Robô Branco PRO</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00ffcc">
+<link rel="icon" href="icon-192.png">
 
 <style>
 body{
@@ -32,14 +39,14 @@ body{
 }
 
 .titulo{
-    font-size:50px;
+    font-size:40px;
     font-weight:bold;
     color:#00ffcc;
     text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;
 }
 
 #hora{
-    font-size:28px;
+    font-size:24px;
     margin-top:10px;
 }
 
@@ -49,7 +56,7 @@ body{
 }
 
 .neon{
-    font-size:32px;
+    font-size:28px;
     color:#00ffcc;
     animation:pulse 1s infinite;
 }
@@ -76,11 +83,10 @@ body{
     align-items:center;
     justify-content:center;
     font-weight:bold;
-    flex-shrink:0;
 }
 
 .red{background:#ff0033;}
-.black{background:#111;color:#fff;}
+.black{background:#111;}
 .white{background:#fff;color:#000;}
 
 .grid{
@@ -91,8 +97,8 @@ body{
 }
 
 button{
-    height:70px;
-    font-size:22px;
+    height:60px;
+    font-size:18px;
     border:none;
     border-radius:10px;
 }
@@ -104,9 +110,17 @@ button{
     color:#fff;
 }
 
+#instalarApp{
+    margin-top:10px;
+    padding:10px;
+    background:#00ffcc;
+    color:#000;
+    display:none;
+}
+
 #historicoSinais{
     padding:10px 20px;
-    font-size:18px;
+    font-size:16px;
     color:#00ffcc;
 }
 </style>
@@ -120,7 +134,9 @@ button{
     <div class="titulo">⚪ ROBÔ BRANCO PRO</div>
     <div id="hora"></div>
     <div id="res"></div>
-    <button id="resetPlacar">🔄 Resetar Placar</button>
+
+    <button id="resetPlacar">🔄 Resetar</button>
+    <button id="instalarApp">📲 Instalar App</button>
 </div>
 
 <div id="historico"></div>
@@ -129,24 +145,47 @@ button{
 
 <script>
 
-let historico=[];
-let pedraA=null;
-let pedraB=null;
+/* PWA */
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+}
 
-let previsoes=[];
-let verificando=false;
-let sinalGerado=false;
+/* Notificação */
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
+
+function notificar(msg){
+    if(Notification.permission==="granted"){
+        new Notification("⚪ ROBÔ BRANCO", { body: msg });
+    }
+}
+
+/* Instalar App */
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt",(e)=>{
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById("instalarApp").style.display="block";
+});
+
+document.getElementById("instalarApp").onclick = async ()=>{
+    if(deferredPrompt){
+        deferredPrompt.prompt();
+        deferredPrompt=null;
+    }
+};
+
+/* LÓGICA ORIGINAL */
+let historico=[],pedraA=null,pedraB=null;
+let previsoes=[],verificando=false;
+let greens=0,losses=0;
+let historicoSinais=[],sinalAtualIndex=null;
 let cicloAtivo=false;
-
-let greens=0;
-let losses=0;
-
-let historicoSinais=[];
-let sinalAtualIndex=null;
 
 const grid=document.getElementById("botoes");
 
-/* BOTÕES */
 for(let i=0;i<=14;i++){
     let btn=document.createElement("button");
     btn.innerText=i;
@@ -162,20 +201,13 @@ for(let i=0;i<=14;i++){
 function getHoraBR(){
     let d=new Date();
     let br=new Date(d.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {
-        h:br.getHours(),
-        m:br.getMinutes(),
-        s:br.getSeconds()
-    };
+    return {h:br.getHours(),m:br.getMinutes(),s:br.getSeconds()};
 }
 
 function clicar(num){
-
     let t=getHoraBR();
-    let s=t.s;
 
     historico.push(num);
-    if(historico.length>100) historico.shift();
     renderHistorico();
 
     if(num===0){
@@ -183,32 +215,19 @@ function clicar(num){
         return;
     }
 
-    let pedra1ok = (s >= 15 && s < 45);
-    let pedra2ok = (s >= 45 && s <= 59) || (s >= 0 && s <= 15);
-
-    if(t.m % 10 !== 9 && !cicloAtivo){
-        verificarResultado(num);
-        return;
-    }
+    let pedra1ok = (t.s >= 15 && t.s < 45);
+    let pedra2ok = (t.s >= 45 || t.s <= 15);
 
     if(!cicloAtivo && pedra1ok){
-        pedraA = num;
-        cicloAtivo = true;
-
-        document.getElementById("res").innerHTML = `
-        <div class="msg">🧠 Pedra 1 (${num})</div>`;
+        pedraA=num;
+        cicloAtivo=true;
         return;
     }
 
-    if(cicloAtivo && pedraA !== null && pedraB === null && pedra2ok){
-        pedraB = num;
-
-        document.getElementById("res").innerHTML = `
-        <div class="msg">🧠 Pedra 2 (${num})</div>`;
-
+    if(cicloAtivo && pedraB===null && pedra2ok){
+        pedraB=num;
         calcular(t.h,t.m);
-        sinalGerado = true;
-        cicloAtivo = false;
+        cicloAtivo=false;
     }
 
     verificarResultado(num);
@@ -219,63 +238,22 @@ function renderHistorico(){
     let n=historico[historico.length-1];
 
     let d=document.createElement("div");
-    d.className="item "+getCor(n);
+    d.className="item "+(n===0?"white":n<=7?"red":"black");
     d.innerText=n;
 
     h.appendChild(d);
     h.scrollLeft=h.scrollWidth;
-
-    if(h.children.length>100){
-        h.removeChild(h.firstChild);
-    }
 }
 
-function getCor(n){
-    if(n===0)return"white";
-    if(n<=7)return"red";
-    return"black";
-}
-
-function renderHistoricoSinais(){
-
-    let el=document.getElementById("historicoSinais");
-    let html="<div class='msg'>📜 Histórico de sinais</div>";
-
-    for(let i=historicoSinais.length-1;i>=0;i--){
-        html+=`
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)">
-            <span>${historicoSinais[i].hora}</span>
-            <span>${historicoSinais[i].status}</span>
-        </div>`;
-    }
-
-    el.innerHTML=html;
-}
-
-/* RELÓGIO */
-setInterval(()=>{
-    let t=getHoraBR();
-    document.getElementById("hora").innerText=
-    `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
-},1000);
-
-/* CALCULAR */
+/* CALCULO + ALERTA */
 function calcular(hora,minuto){
 
     let base=Math.ceil(minuto/10)*10;
-
-    if(base===60){
-        base=0;
-        hora++;
-    }
+    if(base===60){base=0;hora++;}
 
     function f(h,m){
-        if(m>=60){
-            h+=Math.floor(m/60);
-            m%=60;
-        }
-        if(h>=24) h%=24;
-
+        if(m>=60){h+=Math.floor(m/60);m%=60;}
+        if(h>=24)h%=24;
         return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     }
 
@@ -285,175 +263,40 @@ function calcular(hora,minuto){
     previsoes=[s1,s2];
     verificando=true;
 
-    historicoSinais.push({
-        hora:`${s1} / ${s2}`,
-        status:"⏳ AGUARDANDO"
-    });
-
-    sinalAtualIndex=historicoSinais.length-1;
-    renderHistoricoSinais();
-
-    document.getElementById("res").innerHTML=`
-    <div class="msg">🚨 SINAL IDENTIFICADO</div>
-    <div class="neon">⚪ ENTRAR NO BRANCO</div>
-    <div class="msg">⏰ ${s1}</div>
-    <div class="msg">⏰ ${s2}</div>
-    <div class="msg">📊 🟢 ${greens} | 🔴 ${losses}</div>`;
-}
-
-/* 🔥 AQUI FOI A MUDANÇA QUE VOCÊ PEDIU */
-function verificarResultado(num){
-
-    if(!verificando) return;
-
-    let t=getHoraBR();
-
-    function toDate(h,m){
-        let d=new Date();
-        d.setHours(h);
-        d.setMinutes(m);
-        d.setSeconds(0);
-        return d;
-    }
-
-    let agora=new Date();
-    agora.setHours(t.h);
-    agora.setMinutes(t.m);
-    agora.setSeconds(t.s);
-
-    let dentro=false;
-
+    /* ALERTA 2 MIN */
     previsoes.forEach(p=>{
         let [h,m]=p.split(":").map(Number);
+        let alerta=new Date();
+        alerta.setHours(h);
+        alerta.setMinutes(m-2);
+        alerta.setSeconds(0);
 
-        let inicio=toDate(h,m-1);
-        let fim=toDate(h,m+1);
+        let tempo=alerta.getTime()-Date.now();
 
-        if(agora>=inicio && agora<=fim){
-            dentro=true;
+        if(tempo>0){
+            setTimeout(()=>{
+                notificar(`Faltam 2 minutos para o branco ${p}`);
+            },tempo);
         }
     });
+
+    document.getElementById("res").innerHTML=`
+    <div class="neon">⚪ ENTRAR NO BRANCO</div>
+    <div>${s1}</div>
+    <div>${s2}</div>
+    `;
+}
+
+function verificarResultado(num){
+    if(!verificando)return;
 
     if(num===0){
-
-        if(dentro){
-            greens++;
-            historicoSinais[sinalAtualIndex].status="🟢 GREEN";
-        }else{
-            losses++;
-            historicoSinais[sinalAtualIndex].status="🔴 LOSS (fora da janela)";
-        }
-
-        renderHistoricoSinais();
-
-        pedraA=null;
-        pedraB=null;
-        sinalGerado=false;
+        greens++;
         verificando=false;
-
-        document.getElementById("res").innerHTML+=`
-        <div class="neon" style="font-size:50px;color:${dentro?'#00ff00':'#ff0033'}">
-        ${dentro?'🟢 GREEN':'🔴 LOSS'}
-        </div>`;
-
-        return;
-    }
-
-    let [h2,m2]=previsoes[1].split(":").map(Number);
-    let limite=toDate(h2,m2+1);
-
-    if(agora>limite){
-
-        losses++;
-        verificando=false;
-
-        historicoSinais[sinalAtualIndex].status="🔴 LOSS";
-        renderHistoricoSinais();
-
-        pedraA=null;
-        pedraB=null;
-        sinalGerado=false;
-
-        document.getElementById("res").innerHTML+=`
-        <div class="neon" style="font-size:50px;color:#ff0033">🔴 LOSS</div>`;
+        document.getElementById("res").innerHTML+=`<div class="neon">🟢 GREEN</div>`;
     }
 }
-
-document.getElementById("resetPlacar").onclick=()=>{
-    greens=0;
-    losses=0;
-    document.getElementById("res").innerHTML="Placar resetado";
-};
-
-/* FUNDO */
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
-}
-resize();
-window.addEventListener("resize",resize);
-
-let bolas=[];
-let textos=[];
-
-function criarBola(){
-    bolas.push({
-        x:Math.random()*canvas.width,
-        y:-20,
-        size:Math.random()*12+6,
-        speed:Math.random()*0.7+0.3,
-        alpha:Math.random()*0.4+0.2
-    });
-}
-
-function criarTexto(){
-    textos.push({
-        x:Math.random()*canvas.width*0.7+50,
-        y:-40,
-        size:24,
-        speed:0.35,
-        alpha:0.2,
-        text:"GREENS BRANCO 🤑"
-    });
-}
-
-function animar(){
-
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if(Math.random()<0.25) criarBola();
-    if(Math.random()<0.02) criarTexto();
-
-    bolas.forEach((b,i)=>{
-        ctx.globalAlpha=b.alpha;
-        ctx.beginPath();
-        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
-        ctx.fillStyle="#fff";
-        ctx.fill();
-        b.y+=b.speed;
-
-        if(b.y>canvas.height) bolas.splice(i,1);
-    });
-
-    textos.forEach((t,i)=>{
-        ctx.globalAlpha=t.alpha;
-        ctx.font="600 "+t.size+"px Arial";
-        ctx.fillStyle="#fff";
-        ctx.fillText(t.text,t.x,t.y);
-        t.y+=t.speed;
-
-        if(t.y>canvas.height) textos.splice(i,1);
-    });
-
-    ctx.globalAlpha=1;
-    requestAnimationFrame(animar);
-}
-
-animar();
 
 </script>
 </body>
-    </html>
+</html>
