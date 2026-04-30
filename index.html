@@ -240,7 +240,7 @@ function calcular(hora,minuto){
     ${previsoes.map(p=>`<div>${p}</div>`).join("")}`;
 }
 
-/* HISTÓRICO SINAIS */
+/* HISTÓRICO */
 function renderHistoricoSinais(){
 
     let el=document.getElementById("historicoSinais");
@@ -277,7 +277,11 @@ function verificarResultado(num){
     }
 
     let agora=new Date();
-    agora.setHours(t.h,t.m,t.s);
+    // 🔥 CORREÇÃO AQUI (única mudança)
+    agora.setHours(t.h);
+    agora.setMinutes(t.m);
+    agora.setSeconds(t.s);
+    agora.setMilliseconds(0);
 
     previsoes.forEach((p,i)=>{
         let [h,m]=p.split(":").map(Number);
