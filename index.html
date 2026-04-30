@@ -211,7 +211,6 @@ function calcular(hora,minuto){
     let s1 = (pedraA !== null && pedraA !== 0) ? f(hora, base + pedraA) : null;
     let s2 = (pedraB !== null && pedraB !== 0) ? f(hora, base + pedraB) : null;
 
-    // 🔥 REGRA FINAL DAS PEDRAS
     if(s1 && s2){
         previsoes = [s1, s2];
     }else if(s1 && !s2){
@@ -229,8 +228,7 @@ function calcular(hora,minuto){
 
     if(previsoes.length>0){
         historicoSinais.push({
-            horarios:previsoes,
-            status:"⏳ AGUARDANDO"
+            horarios:previsoes.map(h=>({hora:h,status:"⏳"}))
         });
 
         sinalAtualIndex=historicoSinais.length-1;
@@ -244,17 +242,19 @@ function calcular(hora,minuto){
 
 /* HISTÓRICO SINAIS */
 function renderHistoricoSinais(){
+
     let el=document.getElementById("historicoSinais");
     let html="<div class='msg'>📜 Histórico</div>";
 
     for(let i=historicoSinais.length-1;i>=0;i--){
-        let h=historicoSinais[i];
 
-        html+=`
-        <div style="display:flex;justify-content:space-between">
-        <span>${h.horarios.join(" / ")}</span>
-        <span>${h.status}</span>
-        </div>`;
+        let grupo = historicoSinais[i];
+
+        grupo.horarios.forEach(h=>{
+            html+=`<div>${h.hora} ${h.status}</div>`;
+        });
+
+        html+=`<div style="height:10px"></div>`;
     }
 
     el.innerHTML=html;
@@ -279,9 +279,7 @@ function verificarResultado(num){
     let agora=new Date();
     agora.setHours(t.h,t.m,t.s);
 
-    let dentro=false;
-
-    previsoes.forEach(p=>{
+    previsoes.forEach((p,i)=>{
         let [h,m]=p.split(":").map(Number);
 
         let inicio=toDate(h,m-1);
@@ -290,18 +288,10 @@ function verificarResultado(num){
         let fim=toDate(h,m+1);
         fim.setSeconds(59);
 
-        if(agora>=inicio&&agora<=fim){
-            dentro=true;
+        if(num===0 && agora>=inicio && agora<=fim){
+            historicoSinais[sinalAtualIndex].horarios[i].status="✅";
         }
     });
-
-    if(num===0 && dentro){
-        historicoSinais[sinalAtualIndex].status="🟢 GREEN";
-        renderHistoricoSinais();
-        verificando=false;
-        pedraA=null;pedraB=null;minutoPedra1=null;
-        return;
-    }
 
     let ultimoHorario = previsoes[previsoes.length - 1];
     let [h2,m2]=ultimoHorario.split(":").map(Number);
@@ -309,11 +299,18 @@ function verificarResultado(num){
     fimJanelaFinal.setSeconds(59);
 
     if(agora>fimJanelaFinal){
-        historicoSinais[sinalAtualIndex].status="🔴 LOSS";
-        renderHistoricoSinais();
+
+        historicoSinais[sinalAtualIndex].horarios.forEach(h=>{
+            if(h.status==="⏳"){
+                h.status="❌";
+            }
+        });
+
         verificando=false;
         pedraA=null;pedraB=null;minutoPedra1=null;
     }
+
+    renderHistoricoSinais();
 }
 
 /* RESET */
