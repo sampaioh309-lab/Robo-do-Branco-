@@ -3,13 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Robô Branco PRO</title>
-
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#00ffcc">
-<link rel="icon" href="icon-192.png">
 
 <style>
 body{
@@ -33,10 +27,7 @@ body{
     z-index:2;
 }
 
-.top{
-    text-align:center;
-    padding:20px;
-}
+.top{text-align:center;padding:20px;}
 
 .titulo{
     font-size:50px;
@@ -45,15 +36,9 @@ body{
     text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;
 }
 
-#hora{
-    font-size:28px;
-    margin-top:10px;
-}
+#hora{font-size:28px;margin-top:10px;}
 
-.msg{
-    margin-top:10px;
-    color:#ccc;
-}
+.msg{margin-top:10px;color:#ccc;}
 
 .neon{
     font-size:32px;
@@ -75,35 +60,17 @@ body{
 }
 
 .item{
-    width:50px;
-    height:50px;
-    min-width:50px;
+    width:50px;height:50px;min-width:50px;
     border-radius:50%;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-weight:bold;
-    flex-shrink:0;
-}
-
-/* 🔥 BOTÕES CORRIGIDOS */
-.red{
-    background:#ff0033;
-    color:#fff;
     font-weight:900;
 }
 
-.black{
-    background:#111;
-    color:#fff;
-    font-weight:900;
-}
-
-.white{
-    background:#fff;
-    color:#000;
-    font-weight:900;
-}
+.red{background:#ff0033;color:#fff;font-weight:900;}
+.black{background:#111;color:#fff;font-weight:900;}
+.white{background:#fff;color:#000;font-weight:900;}
 
 .grid{
     display:grid;
@@ -127,14 +94,6 @@ button{
     color:#fff;
 }
 
-#instalarApp{
-    margin-top:10px;
-    padding:10px;
-    background:#00ffcc;
-    color:#000;
-    display:none;
-}
-
 #historicoSinais{
     padding:10px 20px;
     font-size:18px;
@@ -151,9 +110,7 @@ button{
     <div class="titulo">⚪ ROBÔ BRANCO PRO</div>
     <div id="hora"></div>
     <div id="res"></div>
-
-    <button id="resetPlacar">🔄 Resetar Placar</button>
-    <button id="instalarApp">📲 Instalar App</button>
+    <button id="resetPlacar">🔄 Resetar</button>
 </div>
 
 <div id="historico"></div>
@@ -162,63 +119,18 @@ button{
 
 <script>
 
-/* PWA */
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
-}
-
-/* Notificação */
-if ("Notification" in window) {
-    Notification.requestPermission();
-}
-
-function notificar(msg){
-    if(Notification.permission==="granted"){
-        new Notification("⚪ ROBÔ BRANCO", { body: msg });
-    }
-}
-
-/* Instalar App */
-let deferredPrompt;
-
-window.addEventListener("beforeinstallprompt",(e)=>{
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById("instalarApp").style.display="block";
-});
-
-document.getElementById("instalarApp").onclick = async ()=>{
-    if(deferredPrompt){
-        deferredPrompt.prompt();
-        deferredPrompt=null;
-    }
-};
-
-/* LÓGICA ORIGINAL */
-let historico=[];
-let pedraA=null;
-let pedraB=null;
-let previsoes=[];
-let verificando=false;
+let historico=[],pedraA=null,pedraB=null;
+let minutoPedra1=null;
+let previsoes=[],verificando=false;
+let historicoSinais=[],sinalAtualIndex=null;
 let cicloAtivo=false;
-
-let greens=0;
-let losses=0;
-
-let historicoSinais=[];
-let sinalAtualIndex=null;
 
 const grid=document.getElementById("botoes");
 
-/* BOTÕES */
 for(let i=0;i<=14;i++){
     let btn=document.createElement("button");
     btn.innerText=i;
-
-    if(i===0) btn.className="white";
-    else if(i<=7) btn.className="red";
-    else btn.className="black";
-
+    btn.className=(i===0?"white":i<=7?"red":"black");
     btn.onclick=()=>clicar(i);
     grid.appendChild(btn);
 }
@@ -226,11 +138,7 @@ for(let i=0;i<=14;i++){
 function getHoraBR(){
     let d=new Date();
     let br=new Date(d.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {
-        h:br.getHours(),
-        m:br.getMinutes(),
-        s:br.getSeconds()
-    };
+    return {h:br.getHours(),m:br.getMinutes(),s:br.getSeconds()};
 }
 
 function clicar(num){
@@ -246,19 +154,23 @@ function clicar(num){
         return;
     }
 
-    let pedra1ok = (t.s >= 15 && t.s < 45);
-    let pedra2ok = (t.s >= 45 || t.s <= 15);
+    let pedra1ok=(t.m%10===9)&&(t.s>=15&&t.s<=45);
+
+    let pedra2ok=
+    (t.m===minutoPedra1 && t.s>=45 && t.s<=59) ||
+    (t.m===(minutoPedra1+1)%60 && t.s>=0 && t.s<=15);
 
     if(!cicloAtivo && pedra1ok){
-        pedraA = num;
-        cicloAtivo = true;
+        pedraA=num;
+        minutoPedra1=t.m;
+        cicloAtivo=true;
         return;
     }
 
-    if(cicloAtivo && pedraB === null && pedra2ok){
-        pedraB = num;
+    if(cicloAtivo && pedraB===null && pedra2ok){
+        pedraB=num;
         calcular(t.h,t.m);
-        cicloAtivo = false;
+        cicloAtivo=false;
     }
 
     verificarResultado(num);
@@ -274,16 +186,16 @@ function renderHistorico(){
 
     h.appendChild(d);
     h.scrollLeft=h.scrollWidth;
-
-    if(h.children.length>100){
-        h.removeChild(h.firstChild);
-    }
 }
 
-/* CALCULAR + ALERTA */
+/* CALCULO */
 function calcular(hora,minuto){
 
-    let base=Math.ceil(minuto/10)*10;
+    let base=minuto;
+
+    if(minuto%10===9){
+        base=minuto+1;
+    }
 
     if(base===60){
         base=0;
@@ -291,68 +203,132 @@ function calcular(hora,minuto){
     }
 
     function f(h,m){
-        if(m>=60){
-            h+=Math.floor(m/60);
-            m%=60;
-        }
-        if(h>=24) h%=24;
-
+        if(m>=60){h+=Math.floor(m/60);m%=60;}
+        if(h>=24)h%=24;
         return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     }
 
-    let s1=f(hora,base+pedraA);
-    let s2=f(hora,base+pedraB);
+    let s1 = (pedraA !== null && pedraA !== 0) ? f(hora, base + pedraA) : null;
+    let s2 = (pedraB !== null && pedraB !== 0) ? f(hora, base + pedraB) : null;
 
-    previsoes=[s1,s2];
+    // 🔥 REGRA FINAL DAS PEDRAS
+    if(s1 && s2){
+        previsoes = [s1, s2];
+    }else if(s1 && !s2){
+        previsoes = [s1];
+    }else if(!s1 && s2){
+        previsoes = [s2];
+    }else{
+        previsoes = [];
+        verificando = false;
+        pedraA=null;pedraB=null;minutoPedra1=null;
+        return;
+    }
+
     verificando=true;
 
-    /* 🔔 ALERTA 2 MINUTOS */
+    if(previsoes.length>0){
+        historicoSinais.push({
+            horarios:previsoes,
+            status:"⏳ AGUARDANDO"
+        });
+
+        sinalAtualIndex=historicoSinais.length-1;
+        renderHistoricoSinais();
+    }
+
+    document.getElementById("res").innerHTML=`
+    <div class="neon">⚪ ENTRAR NO BRANCO</div>
+    ${previsoes.map(p=>`<div>${p}</div>`).join("")}`;
+}
+
+/* HISTÓRICO SINAIS */
+function renderHistoricoSinais(){
+    let el=document.getElementById("historicoSinais");
+    let html="<div class='msg'>📜 Histórico</div>";
+
+    for(let i=historicoSinais.length-1;i>=0;i--){
+        let h=historicoSinais[i];
+
+        html+=`
+        <div style="display:flex;justify-content:space-between">
+        <span>${h.horarios.join(" / ")}</span>
+        <span>${h.status}</span>
+        </div>`;
+    }
+
+    el.innerHTML=html;
+}
+
+/* RESULTADO */
+function verificarResultado(num){
+
+    if(!verificando)return;
+
+    let t=getHoraBR();
+
+    function toDate(h,m){
+        let d=new Date();
+        d.setHours(h);
+        d.setMinutes(m);
+        d.setSeconds(0);
+        d.setMilliseconds(0);
+        return d;
+    }
+
+    let agora=new Date();
+    agora.setHours(t.h,t.m,t.s);
+
+    let dentro=false;
+
     previsoes.forEach(p=>{
         let [h,m]=p.split(":").map(Number);
 
-        let alerta=new Date();
-        alerta.setHours(h);
-        alerta.setMinutes(m-2);
-        alerta.setSeconds(0);
+        let inicio=toDate(h,m-1);
+        inicio.setSeconds(0);
 
-        let tempo=alerta.getTime()-Date.now();
+        let fim=toDate(h,m+1);
+        fim.setSeconds(59);
 
-        if(tempo>0){
-            setTimeout(()=>{
-                notificar(`Faltam 2 minutos para o branco ${p}`);
-            },tempo);
+        if(agora>=inicio&&agora<=fim){
+            dentro=true;
         }
     });
 
-    document.getElementById("res").innerHTML=`
-    <div class="msg">🚨 SINAL IDENTIFICADO</div>
-    <div class="neon">⚪ ENTRAR NO BRANCO</div>
-    <div class="msg">⏰ ${s1}</div>
-    <div class="msg">⏰ ${s2}</div>
-    <div class="msg">📊 🟢 ${greens} | 🔴 ${losses}</div>`;
-}
-
-function verificarResultado(num){
-
-    if(!verificando) return;
-
-    if(num===0){
-        greens++;
+    if(num===0 && dentro){
+        historicoSinais[sinalAtualIndex].status="🟢 GREEN";
+        renderHistoricoSinais();
         verificando=false;
+        pedraA=null;pedraB=null;minutoPedra1=null;
+        return;
+    }
 
-        document.getElementById("res").innerHTML+=`
-        <div class="neon" style="color:#00ff00">🟢 GREEN</div>`;
+    let ultimoHorario = previsoes[previsoes.length - 1];
+    let [h2,m2]=ultimoHorario.split(":").map(Number);
+    let fimJanelaFinal=toDate(h2,m2+1);
+    fimJanelaFinal.setSeconds(59);
+
+    if(agora>fimJanelaFinal){
+        historicoSinais[sinalAtualIndex].status="🔴 LOSS";
+        renderHistoricoSinais();
+        verificando=false;
+        pedraA=null;pedraB=null;minutoPedra1=null;
     }
 }
 
 /* RESET */
 document.getElementById("resetPlacar").onclick=()=>{
-    greens=0;
-    losses=0;
-    document.getElementById("res").innerHTML="Placar resetado";
+    document.getElementById("res").innerHTML="Resetado";
 };
 
-/* 🔥 FUNDO ANIMADO (MANTIDO) */
+/* RELÓGIO */
+setInterval(()=>{
+    let t=getHoraBR();
+    document.getElementById("hora").innerText=
+    `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
+},1000);
+
+/* FUNDO */
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
 
@@ -376,7 +352,6 @@ function criarBola(){
 }
 
 function animar(){
-
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     if(Math.random()<0.25) criarBola();
@@ -400,4 +375,4 @@ animar();
 
 </script>
 </body>
-    </html>
+</html>
