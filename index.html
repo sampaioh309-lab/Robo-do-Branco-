@@ -68,9 +68,9 @@ body{
     font-weight:900;
 }
 
-.red{background:#ff0033;color:#fff;font-weight:900;}
-.black{background:#111;color:#fff;font-weight:900;}
-.white{background:#fff;color:#000;font-weight:900;}
+.red{background:#ff0033;color:#fff;}
+.black{background:#111;color:#fff;}
+.white{background:#fff;color:#000;}
 
 .grid{
     display:grid;
@@ -99,6 +99,12 @@ button{
     font-size:18px;
     color:#00ffcc;
 }
+
+#statusAPI{
+    margin-top:10px;
+    font-size:14px;
+    color:#00ffcc;
+}
 </style>
 </head>
 
@@ -110,6 +116,7 @@ button{
     <div class="titulo">⚪ ROBÔ BRANCO PRO</div>
     <div id="hora"></div>
     <div id="res"></div>
+    <div id="statusAPI">🔌 Conectando API...</div>
     <button id="resetPlacar">🔄 Resetar</button>
 </div>
 
@@ -211,29 +218,22 @@ function calcular(hora,minuto){
     let s1 = (pedraA !== null && pedraA !== 0) ? f(hora, base + pedraA) : null;
     let s2 = (pedraB !== null && pedraB !== 0) ? f(hora, base + pedraB) : null;
 
-    if(s1 && s2){
-        previsoes = [s1, s2];
-    }else if(s1 && !s2){
-        previsoes = [s1];
-    }else if(!s1 && s2){
-        previsoes = [s2];
-    }else{
-        previsoes = [];
-        verificando = false;
+    previsoes = [s1, s2].filter(Boolean);
+
+    if(previsoes.length===0){
+        verificando=false;
         pedraA=null;pedraB=null;minutoPedra1=null;
         return;
     }
 
     verificando=true;
 
-    if(previsoes.length>0){
-        historicoSinais.push({
-            horarios:previsoes.map(h=>({hora:h,status:"⏳"}))
-        });
+    historicoSinais.push({
+        horarios:previsoes.map(h=>({hora:h,status:"⏳"}))
+    });
 
-        sinalAtualIndex=historicoSinais.length-1;
-        renderHistoricoSinais();
-    }
+    sinalAtualIndex=historicoSinais.length-1;
+    renderHistoricoSinais();
 
     document.getElementById("res").innerHTML=`
     <div class="neon">⚪ ENTRAR NO BRANCO</div>
@@ -242,18 +242,13 @@ function calcular(hora,minuto){
 
 /* HISTÓRICO */
 function renderHistoricoSinais(){
-
     let el=document.getElementById("historicoSinais");
     let html="<div class='msg'>📜 Histórico</div>";
 
     for(let i=historicoSinais.length-1;i>=0;i--){
-
-        let grupo = historicoSinais[i];
-
-        grupo.horarios.forEach(h=>{
+        historicoSinais[i].horarios.forEach(h=>{
             html+=`<div>${h.hora} ${h.status}</div>`;
         });
-
         html+=`<div style="height:10px"></div>`;
     }
 
@@ -272,23 +267,18 @@ function verificarResultado(num){
         d.setHours(h);
         d.setMinutes(m);
         d.setSeconds(0);
-        d.setMilliseconds(0);
         return d;
     }
 
     let agora=new Date();
-    // 🔥 CORREÇÃO AQUI (única mudança)
     agora.setHours(t.h);
     agora.setMinutes(t.m);
     agora.setSeconds(t.s);
-    agora.setMilliseconds(0);
 
     previsoes.forEach((p,i)=>{
         let [h,m]=p.split(":").map(Number);
 
         let inicio=toDate(h,m-1);
-        inicio.setSeconds(0);
-
         let fim=toDate(h,m+1);
         fim.setSeconds(59);
 
@@ -297,17 +287,13 @@ function verificarResultado(num){
         }
     });
 
-    let ultimoHorario = previsoes[previsoes.length - 1];
-    let [h2,m2]=ultimoHorario.split(":").map(Number);
-    let fimJanelaFinal=toDate(h2,m2+1);
-    fimJanelaFinal.setSeconds(59);
+    let [h2,m2]=previsoes[previsoes.length-1].split(":").map(Number);
+    let fimFinal=toDate(h2,m2+1);
+    fimFinal.setSeconds(59);
 
-    if(agora>fimJanelaFinal){
-
+    if(agora>fimFinal){
         historicoSinais[sinalAtualIndex].horarios.forEach(h=>{
-            if(h.status==="⏳"){
-                h.status="❌";
-            }
+            if(h.status==="⏳") h.status="❌";
         });
 
         verificando=false;
@@ -316,6 +302,33 @@ function verificarResultado(num){
 
     renderHistoricoSinais();
 }
+
+/* API BLAZE */
+let ultimoId=null;
+
+async function pegarResultados(){
+    try{
+        let res=await fetch("https://blaze.bet.br/api/singleplayer-originals/originals/roulette_games/recent/history/1?page=1&limit=5");
+        let data=await res.json();
+
+        if(!data || !data[0]) return;
+
+        document.getElementById("statusAPI").innerText="🟢 API Conectada";
+
+        let ultimo=data[0];
+
+        if(ultimoId===ultimo.id) return;
+
+        ultimoId=ultimo.id;
+
+        clicar(ultimo.roll);
+
+    }catch(e){
+        document.getElementById("statusAPI").innerText="🔴 API Offline";
+    }
+}
+
+setInterval(pegarResultados,3000);
 
 /* RESET */
 document.getElementById("resetPlacar").onclick=()=>{
@@ -329,7 +342,7 @@ setInterval(()=>{
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
 },1000);
 
-/* FUNDO */
+/* FUNDO ANIMADO */
 const canvas=document.getElementById("bg");
 const ctx=canvas.getContext("2d");
 
