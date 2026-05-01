@@ -9,35 +9,40 @@ let browser;
 let page;
 let ultimoNumero = null;
 
+// inicia navegador UMA vez
 (async () => {
-    browser = await puppeteer.launch({
-        headless: false, // 👈 deixa visível pra você ver se abriu
-        args: ["--no-sandbox"]
-    });
+    try{
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ["--no-sandbox"]
+        });
 
-    page = await browser.newPage();
+        page = await browser.newPage();
 
-    await page.goto("https://blaze.bet.br/pt/games/double", {
-        waitUntil: "domcontentloaded"
-    });
+        await page.goto("https://blaze.bet.br/pt/games/double", {
+            waitUntil: "domcontentloaded"
+        });
 
-    console.log("🟢 Página aberta, aguardando carregar...");
+        console.log("🟢 Blaze carregando...");
 
-    // espera o histórico aparecer (mais seguro)
-    await page.waitForSelector("div[class*=entries]", { timeout: 0 });
+        // espera aparecer histórico
+        await page.waitForSelector("div[class*=entries]", { timeout: 0 });
 
-    console.log("🟢 Blaze carregada e pronta");
+        console.log("🟢 Blaze pronta");
+
+    }catch(e){
+        console.log("Erro ao iniciar:", e);
+    }
 })();
 
 app.get("/blaze", async (req, res) => {
-    try {
+    try{
 
         const numero = await page.evaluate(() => {
 
-            // pega TODOS os resultados visíveis
-            const itens = document.querySelectorAll("div[class*=entries] div");
+            const elementos = document.querySelectorAll("div[class*=entries] div");
 
-            for (let el of itens) {
+            for (let el of elementos) {
                 let texto = el.innerText.trim();
 
                 if (texto !== "" && !isNaN(texto)) {
@@ -48,17 +53,17 @@ app.get("/blaze", async (req, res) => {
             return null;
         });
 
-        if (numero === null) {
+        if(numero === null){
             return res.json([]);
         }
 
-        if (numero === ultimoNumero) {
+        if(numero === ultimoNumero){
             return res.json([]);
         }
 
         ultimoNumero = numero;
 
-        console.log("Novo número:", numero);
+        console.log("Novo resultado:", numero);
 
         res.json([
             {
@@ -67,10 +72,12 @@ app.get("/blaze", async (req, res) => {
             }
         ]);
 
-    } catch (e) {
-        console.log("ERRO:", e.message);
+    }catch(e){
+        console.log("Erro leitura:", e.message);
         res.status(500).json({ erro: "falha leitura" });
     }
 });
 
-app.listen(3000, () => console.log("🟢 Servidor rodando"));
+app.listen(3000, () => {
+    console.log("🟢 Servidor rodando em http://localhost:3000");
+});
