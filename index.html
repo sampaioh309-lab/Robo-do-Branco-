@@ -6,105 +6,25 @@
 <title>Robô Branco PRO</title>
 
 <style>
-body{
-    margin:0;
-    background:#020617;
-    color:#fff;
-    font-family:Arial;
-    overflow:auto;
-    min-height:200vh;
-}
-
-#bg{
-    position:fixed;
-    inset:0;
-    z-index:0;
-    pointer-events:none;
-}
-
-.top,#historico,.grid,#historicoSinais{
-    position:relative;
-    z-index:2;
-}
-
+body{margin:0;background:#020617;color:#fff;font-family:Arial;overflow:auto;min-height:200vh;}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.top,#historico,.grid,#historicoSinais{position:relative;z-index:2;}
 .top{text-align:center;padding:20px;}
-
-.titulo{
-    font-size:50px;
-    font-weight:bold;
-    color:#00ffcc;
-    text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;
-}
-
+.titulo{font-size:50px;font-weight:bold;color:#00ffcc;text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;}
 #hora{font-size:28px;margin-top:10px;}
-
 .msg{margin-top:10px;color:#ccc;}
-
-.neon{
-    font-size:32px;
-    color:#00ffcc;
-    animation:pulse 1s infinite;
-}
-
-@keyframes pulse{
-    0%{text-shadow:0 0 5px #00ffcc;}
-    50%{text-shadow:0 0 20px #00ffcc;}
-    100%{text-shadow:0 0 5px #00ffcc;}
-}
-
-#historico{
-    display:flex;
-    overflow-x:auto;
-    padding:10px;
-    gap:10px;
-}
-
-.item{
-    width:50px;height:50px;min-width:50px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:900;
-}
-
-.red{background:#ff0033;color:#fff;}
-.black{background:#111;color:#fff;}
+.neon{font-size:32px;color:#00ffcc;animation:pulse 1s infinite;}
+@keyframes pulse{0%{text-shadow:0 0 5px #00ffcc;}50%{text-shadow:0 0 20px #00ffcc;}100%{text-shadow:0 0 5px #00ffcc;}}
+#historico{display:flex;overflow-x:auto;padding:10px;gap:10px;}
+.item{width:50px;height:50px;min-width:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;}
+.red{background:#ff0033;}
+.black{background:#111;}
 .white{background:#fff;color:#000;}
-
-.grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-    padding:20px;
-}
-
-button{
-    height:70px;
-    font-size:22px;
-    font-weight:900;
-    border:none;
-    border-radius:10px;
-}
-
-#resetPlacar{
-    margin-top:10px;
-    padding:10px;
-    background:#ff0033;
-    color:#fff;
-}
-
-#historicoSinais{
-    padding:10px 20px;
-    font-size:18px;
-    color:#00ffcc;
-}
-
-#statusAPI{
-    margin-top:10px;
-    font-size:14px;
-    color:#00ffcc;
-}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:20px;}
+button{height:70px;font-size:22px;font-weight:900;border:none;border-radius:10px;}
+#resetPlacar{margin-top:10px;padding:10px;background:#ff0033;color:#fff;}
+#historicoSinais{padding:10px 20px;font-size:18px;color:#00ffcc;}
+#statusAPI{margin-top:10px;font-size:14px;color:#00ffcc;}
 </style>
 </head>
 
@@ -113,11 +33,11 @@ button{
 <canvas id="bg"></canvas>
 
 <div class="top">
-    <div class="titulo">⚪ ROBÔ BRANCO PRO</div>
-    <div id="hora"></div>
-    <div id="res"></div>
-    <div id="statusAPI">🔌 Conectando API...</div>
-    <button id="resetPlacar">🔄 Resetar</button>
+<div class="titulo">⚪ ROBÔ BRANCO PRO</div>
+<div id="hora"></div>
+<div id="res"></div>
+<div id="statusAPI">🔌 Conectando API...</div>
+<button id="resetPlacar">🔄 Resetar</button>
 </div>
 
 <div id="historico"></div>
@@ -149,17 +69,13 @@ function getHoraBR(){
 }
 
 function clicar(num){
-
     let t=getHoraBR();
 
     historico.push(num);
     if(historico.length>100) historico.shift();
     renderHistorico();
 
-    if(num===0){
-        verificarResultado(num);
-        return;
-    }
+    if(num===0){verificarResultado(num);return;}
 
     let pedra1ok=(t.m%10===9)&&(t.s>=15&&t.s<=45);
 
@@ -195,19 +111,10 @@ function renderHistorico(){
     h.scrollLeft=h.scrollWidth;
 }
 
-/* CALCULO */
 function calcular(hora,minuto){
-
     let base=minuto;
-
-    if(minuto%10===9){
-        base=minuto+1;
-    }
-
-    if(base===60){
-        base=0;
-        hora++;
-    }
+    if(minuto%10===9) base=minuto+1;
+    if(base===60){base=0;hora++;}
 
     function f(h,m){
         if(m>=60){h+=Math.floor(m/60);m%=60;}
@@ -215,16 +122,11 @@ function calcular(hora,minuto){
         return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     }
 
-    let s1 = (pedraA !== null && pedraA !== 0) ? f(hora, base + pedraA) : null;
-    let s2 = (pedraB !== null && pedraB !== 0) ? f(hora, base + pedraB) : null;
+    let s1 = pedraA ? f(hora, base + pedraA) : null;
+    let s2 = pedraB ? f(hora, base + pedraB) : null;
 
-    previsoes = [s1, s2].filter(Boolean);
-
-    if(previsoes.length===0){
-        verificando=false;
-        pedraA=null;pedraB=null;minutoPedra1=null;
-        return;
-    }
+    previsoes=[s1,s2].filter(Boolean);
+    if(previsoes.length===0){verificando=false;return;}
 
     verificando=true;
 
@@ -235,12 +137,11 @@ function calcular(hora,minuto){
     sinalAtualIndex=historicoSinais.length-1;
     renderHistoricoSinais();
 
-    document.getElementById("res").innerHTML=`
-    <div class="neon">⚪ ENTRAR NO BRANCO</div>
+    document.getElementById("res").innerHTML=
+    `<div class="neon">⚪ ENTRAR NO BRANCO</div>
     ${previsoes.map(p=>`<div>${p}</div>`).join("")}`;
 }
 
-/* HISTÓRICO */
 function renderHistoricoSinais(){
     let el=document.getElementById("historicoSinais");
     let html="<div class='msg'>📜 Histórico</div>";
@@ -255,60 +156,32 @@ function renderHistoricoSinais(){
     el.innerHTML=html;
 }
 
-/* RESULTADO */
 function verificarResultado(num){
-
     if(!verificando)return;
 
     let t=getHoraBR();
-
-    function toDate(h,m){
-        let d=new Date();
-        d.setHours(h);
-        d.setMinutes(m);
-        d.setSeconds(0);
-        return d;
-    }
-
     let agora=new Date();
-    agora.setHours(t.h);
-    agora.setMinutes(t.m);
-    agora.setSeconds(t.s);
+    agora.setHours(t.h,t.m,t.s);
 
     previsoes.forEach((p,i)=>{
         let [h,m]=p.split(":").map(Number);
-
-        let inicio=toDate(h,m-1);
-        let fim=toDate(h,m+1);
-        fim.setSeconds(59);
+        let inicio=new Date();inicio.setHours(h,m-1,0);
+        let fim=new Date();fim.setHours(h,m+1,59);
 
         if(num===0 && agora>=inicio && agora<=fim){
             historicoSinais[sinalAtualIndex].horarios[i].status="✅";
         }
     });
 
-    let [h2,m2]=previsoes[previsoes.length-1].split(":").map(Number);
-    let fimFinal=toDate(h2,m2+1);
-    fimFinal.setSeconds(59);
-
-    if(agora>fimFinal){
-        historicoSinais[sinalAtualIndex].horarios.forEach(h=>{
-            if(h.status==="⏳") h.status="❌";
-        });
-
-        verificando=false;
-        pedraA=null;pedraB=null;minutoPedra1=null;
-    }
-
     renderHistoricoSinais();
 }
 
-/* API COM PROXY */
+/* API BACKEND */
 let ultimoId=null;
 
 async function pegarResultados(){
     try{
-        let res=await fetch("https://api.allorigins.win/raw?url=https://blaze.bet.br/api/singleplayer-originals/originals/roulette_games/recent/history/1?page=1&limit=5");
+        let res=await fetch("http://localhost:3000/blaze");
         let data=await res.json();
 
         if(!data || !data[0]) return;
@@ -318,7 +191,6 @@ async function pegarResultados(){
         let ultimo=data[0];
 
         if(ultimoId===ultimo.id) return;
-
         ultimoId=ultimo.id;
 
         clicar(ultimo.roll);
@@ -330,62 +202,12 @@ async function pegarResultados(){
 
 setInterval(pegarResultados,3000);
 
-/* RESET */
-document.getElementById("resetPlacar").onclick=()=>{
-    document.getElementById("res").innerHTML="Resetado";
-};
-
 /* RELÓGIO */
 setInterval(()=>{
     let t=getHoraBR();
     document.getElementById("hora").innerText=
     `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
 },1000);
-
-/* FUNDO */
-const canvas=document.getElementById("bg");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight;
-}
-resize();
-window.addEventListener("resize",resize);
-
-let bolas=[];
-
-function criarBola(){
-    bolas.push({
-        x:Math.random()*canvas.width,
-        y:-20,
-        size:Math.random()*12+6,
-        speed:Math.random()*0.7+0.3,
-        alpha:Math.random()*0.4+0.2
-    });
-}
-
-function animar(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if(Math.random()<0.25) criarBola();
-
-    bolas.forEach((b,i)=>{
-        ctx.globalAlpha=b.alpha;
-        ctx.beginPath();
-        ctx.arc(b.x,b.y,b.size,0,Math.PI*2);
-        ctx.fillStyle="#fff";
-        ctx.fill();
-        b.y+=b.speed;
-
-        if(b.y>canvas.height) bolas.splice(i,1);
-    });
-
-    ctx.globalAlpha=1;
-    requestAnimationFrame(animar);
-}
-
-animar();
 
 </script>
 </body>
