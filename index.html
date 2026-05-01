@@ -176,21 +176,30 @@ function verificarResultado(num){
     renderHistoricoSinais();
 }
 
-/* API BACKEND */
+/* API BACKEND CORRIGIDA */
 let ultimoId=null;
 
 async function pegarResultados(){
     try{
         let res=await fetch("http://localhost:3000/blaze");
+
+        if(!res.ok){
+            document.getElementById("statusAPI").innerText="🔴 API Offline";
+            return;
+        }
+
         let data=await res.json();
 
-        if(!data || !data[0]) return;
-
         document.getElementById("statusAPI").innerText="🟢 API Conectada";
+
+        if(!data || data.length === 0){
+            return;
+        }
 
         let ultimo=data[0];
 
         if(ultimoId===ultimo.id) return;
+
         ultimoId=ultimo.id;
 
         clicar(ultimo.roll);
