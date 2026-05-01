@@ -5,48 +5,60 @@ const puppeteer = require("puppeteer");
 const app = express();
 app.use(cors());
 
-let ultimoNumero = null;
-
-// inicia navegador só uma vez
 let browser;
 let page;
+let ultimoNumero = null;
 
 (async () => {
     browser = await puppeteer.launch({
-        headless: true,
+        headless: false, // 👈 deixa visível pra você ver se abriu
         args: ["--no-sandbox"]
     });
 
     page = await browser.newPage();
 
     await page.goto("https://blaze.bet.br/pt/games/double", {
-        waitUntil: "networkidle2"
+        waitUntil: "domcontentloaded"
     });
 
-    console.log("🟢 Blaze carregada");
+    console.log("🟢 Página aberta, aguardando carregar...");
+
+    // espera o histórico aparecer (mais seguro)
+    await page.waitForSelector("div[class*=entries]", { timeout: 0 });
+
+    console.log("🟢 Blaze carregada e pronta");
 })();
 
 app.get("/blaze", async (req, res) => {
     try {
 
         const numero = await page.evaluate(() => {
-            const el = document.querySelector(".recent-entries .entry");
 
-            if (!el) return null;
+            // pega TODOS os resultados visíveis
+            const itens = document.querySelectorAll("div[class*=entries] div");
 
-            return parseInt(el.innerText);
+            for (let el of itens) {
+                let texto = el.innerText.trim();
+
+                if (texto !== "" && !isNaN(texto)) {
+                    return parseInt(texto);
+                }
+            }
+
+            return null;
         });
 
         if (numero === null) {
             return res.json([]);
         }
 
-        // evita repetir
         if (numero === ultimoNumero) {
             return res.json([]);
         }
 
         ultimoNumero = numero;
+
+        console.log("Novo número:", numero);
 
         res.json([
             {
@@ -56,6 +68,7 @@ app.get("/blaze", async (req, res) => {
         ]);
 
     } catch (e) {
+        console.log("ERRO:", e.message);
         res.status(500).json({ erro: "falha leitura" });
     }
 });
