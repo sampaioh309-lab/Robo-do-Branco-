@@ -1,223 +1,243 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Robô Branco PRO</title>
+<title>Hunter Branco Manual PRO</title>
 
 <style>
-body{margin:0;background:#020617;color:#fff;font-family:Arial;overflow:auto;min-height:200vh;}
-#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
-.top,#historico,.grid,#historicoSinais{position:relative;z-index:2;}
-.top{text-align:center;padding:20px;}
-.titulo{font-size:50px;font-weight:bold;color:#00ffcc;text-shadow:0 0 10px #00ffcc,0 0 40px #00ffcc;}
-#hora{font-size:28px;margin-top:10px;}
-.msg{margin-top:10px;color:#ccc;}
-.neon{font-size:32px;color:#00ffcc;animation:pulse 1s infinite;}
-@keyframes pulse{0%{text-shadow:0 0 5px #00ffcc;}50%{text-shadow:0 0 20px #00ffcc;}100%{text-shadow:0 0 5px #00ffcc;}}
-#historico{display:flex;overflow-x:auto;padding:10px;gap:10px;}
-.item{width:50px;height:50px;min-width:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;}
-.red{background:#ff0033;}
-.black{background:#111;}
-.white{background:#fff;color:#000;}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:20px;}
-button{height:70px;font-size:22px;font-weight:900;border:none;border-radius:10px;}
-#resetPlacar{margin-top:10px;padding:10px;background:#ff0033;color:#fff;}
-#historicoSinais{padding:10px 20px;font-size:18px;color:#00ffcc;}
-#statusAPI{margin-top:10px;font-size:14px;color:#00ffcc;}
+body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
+.container { max-width:900px; margin:auto; }
+
+.btn {
+    font-size:30px; padding:15px; margin:5px;
+    border:none; border-radius:10px; cursor:pointer;
+}
+
+.vermelho { background:#ef4444; }
+.preto { background:#111; color:#fff; }
+.branco { background:#fff; color:#000; }
+
+.numero-btn { padding:10px; margin:5px; border-radius:8px; border:none; cursor:pointer; }
+
+.card { background:#0f172a; margin:10px; padding:15px; border-radius:10px; }
+
+.sinal { background:#1e293b; margin:5px; padding:10px; border-radius:8px; }
+
+.win { color:#22c55e; }
+.loss { color:#ef4444; }
+
+.relogio { font-size:20px; font-weight:bold; color:#38bdf8; margin-top:10px; }
+
+#historico {
+    display:flex;
+    justify-content:flex-start;
+    flex-wrap:nowrap;
+    overflow:hidden;
+}
+
+.bolinha {
+    width:32px; height:32px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:bold; margin:3px; font-size:14px;
+}
+
+.b-vermelho { background:#ef4444; color:#fff; }
+.b-preto { background:#111; color:#fff; }
+.b-branco { background:#fff; color:#000; box-shadow:0 0 6px #fff; }
+
+.modal {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.8);
+    display:none; justify-content:center; align-items:center;
+}
+
+.modal-content { background:#0f172a; padding:20px; border-radius:10px; }
+
+#resultadoTela {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    font-size:80px;
+    font-weight:bold;
+    z-index:9999;
+}
+
+.green { color:#22c55e; }
+.red { color:#ef4444; }
 </style>
 </head>
 
 <body>
 
-<canvas id="bg"></canvas>
+<div class="container">
 
-<div class="top">
-<div class="titulo">⚪ ROBÔ BRANCO PRO</div>
-<div id="hora"></div>
-<div id="res"></div>
-<div id="statusAPI">🔌 Conectando API...</div>
-<button id="resetPlacar">🔄 Resetar</button>
+<h1>🤖 HUNTER BRANCO MANUAL PRO</h1>
+<div class="relogio" id="relogio">--:--:--</div>
+
+<div class="card">
+    <h2>Registrar Jogada</h2>
+    <button class="btn vermelho" onclick="abrirNumeros(1)">🔴</button>
+    <button class="btn preto" onclick="abrirNumeros(2)">⚫</button>
+    <button class="btn branco" onclick="add(0,0)">⚪</button>
 </div>
 
-<div id="historico"></div>
-<div id="historicoSinais"></div>
-<div class="grid" id="botoes"></div>
+<div class="card">
+    <h2>Histórico</h2>
+    <div id="historico"></div>
+</div>
+
+<div class="card">
+    <h2>Sinais</h2>
+    <div id="sinais"></div>
+</div>
+
+<div class="card">
+    <h2>Estatísticas</h2>
+    <div>Wins: <span id="wins">0</span></div>
+    <div>Loss: <span id="loss">0</span></div>
+    <div>Assertividade: <span id="assert">0%</span></div>
+</div>
+
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-content" id="numeros"></div>
+</div>
+
+<div id="resultadoTela"></div>
 
 <script>
+let historico = [];
+let sinais = [];
+let bufferSinais = [];
 
-let historico=[],pedraA=null,pedraB=null;
-let minutoPedra1=null;
-let previsoes=[],verificando=false;
-let historicoSinais=[],sinalAtualIndex=null;
-let cicloAtivo=false;
+let wins = 0;
+let loss = 0;
 
-const grid=document.getElementById("botoes");
-
-for(let i=0;i<=14;i++){
-    let btn=document.createElement("button");
-    btn.innerText=i;
-    btn.className=(i===0?"white":i<=7?"red":"black");
-    btn.onclick=()=>clicar(i);
-    grid.appendChild(btn);
+// NOTIFICAÇÃO
+if (Notification.permission !== "granted") {
+    Notification.requestPermission();
 }
 
-function getHoraBR(){
-    let d=new Date();
-    let br=new Date(d.toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
-    return {h:br.getHours(),m:br.getMinutes(),s:br.getSeconds()};
+function notificar(msg) {
+    if (Notification.permission === "granted") {
+        new Notification("🤖 Hunter Branco", { body: msg });
+    }
 }
 
-function clicar(num){
-    let t=getHoraBR();
+// RELÓGIO
+function atualizarRelogio() {
+    const horaBR = new Date().toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo"});
+    document.getElementById("relogio").innerText = horaBR;
+}
+setInterval(atualizarRelogio,1000);
+atualizarRelogio();
 
-    historico.push(num);
-    if(historico.length>100) historico.shift();
-    renderHistorico();
+// REGRA
+function podeGerarSinal() {
+    let d = new Date(), m = d.getMinutes(), s = d.getSeconds();
+    return (m % 10 === 9 && s >= 30) || (m % 10 === 0 && s <= 5);
+}
 
-    if(num===0){verificarResultado(num);return;}
+// 🔥 IDENTIFICAR PEDRA 2
+function ehPedra2(data){
+    const s = data.getSeconds();
+    return (s >= 45 || s <= 14);
+}
 
-    let pedra1ok=(t.m%10===9)&&(t.s>=15&&t.s<=45);
+// ABRIR NÚMEROS
+function abrirNumeros(cor) {
+    let html = "<h3>Escolha o número</h3>";
+    let inicio = cor === 1 ? 1 : 8;
+    let fim = cor === 1 ? 7 : 14;
 
-    let pedra2ok=
-    (t.m===minutoPedra1 && t.s>=45 && t.s<=59) ||
-    (t.m===(minutoPedra1+1)%60 && t.s>=0 && t.s<=15);
-
-    if(!cicloAtivo && pedra1ok){
-        pedraA=num;
-        minutoPedra1=t.m;
-        cicloAtivo=true;
-        return;
+    for (let i = inicio; i <= fim; i++) {
+        html += `<button class="numero-btn" onclick="add(${cor}, ${i})">${i}</button>`;
     }
 
-    if(cicloAtivo && pedraB===null && pedra2ok){
-        pedraB=num;
-        calcular(t.h,t.m);
-        cicloAtivo=false;
-    }
-
-    verificarResultado(num);
+    document.getElementById("numeros").innerHTML = html;
+    document.getElementById("modal").style.display = "flex";
 }
 
-function renderHistorico(){
-    let h=document.getElementById("historico");
-    let n=historico[historico.length-1];
+// ADD (🔥 ALTERAÇÃO AQUI)
+function add(cor, numero) {
 
-    let d=document.createElement("div");
-    d.className="item "+(n===0?"white":n<=7?"red":"black");
-    d.innerText=n;
+    document.getElementById("modal").style.display = "none";
 
-    h.appendChild(d);
-    h.scrollLeft=h.scrollWidth;
-}
+    const agoraReal = new Date();
 
-function calcular(hora,minuto){
-    let base=minuto;
-    if(minuto%10===9) base=minuto+1;
-    if(base===60){base=0;hora++;}
+    historico.push({ cor, numero, hora: agoraReal });
 
-    function f(h,m){
-        if(m>=60){h+=Math.floor(m/60);m%=60;}
-        if(h>=24)h%=24;
-        return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-    }
+    if (historico.length > 100) historico.shift();
 
-    let s1 = pedraA ? f(hora, base + pedraA) : null;
-    let s2 = pedraB ? f(hora, base + pedraB) : null;
+    if (cor !== 0 && podeGerarSinal()) {
 
-    previsoes=[s1,s2].filter(Boolean);
-    if(previsoes.length===0){verificando=false;return;}
+        const baseRef = historico[historico.length - 1].hora;
+        const base = new Date(baseRef);
 
-    verificando=true;
+        base.setSeconds(0);
+        base.setMilliseconds(0);
 
-    historicoSinais.push({
-        horarios:previsoes.map(h=>({hora:h,status:"⏳"}))
-    });
+        base.setMinutes(base.getMinutes() + 1);
 
-    sinalAtualIndex=historicoSinais.length-1;
-    renderHistoricoSinais();
+        const alvo = new Date(base.getTime() + numero * 60000);
 
-    document.getElementById("res").innerHTML=
-    `<div class="neon">⚪ ENTRAR NO BRANCO</div>
-    ${previsoes.map(p=>`<div>${p}</div>`).join("")}`;
-}
-
-function renderHistoricoSinais(){
-    let el=document.getElementById("historicoSinais");
-    let html="<div class='msg'>📜 Histórico</div>";
-
-    for(let i=historicoSinais.length-1;i>=0;i--){
-        historicoSinais[i].horarios.forEach(h=>{
-            html+=`<div>${h.hora} ${h.status}</div>`;
-        });
-        html+=`<div style="height:10px"></div>`;
-    }
-
-    el.innerHTML=html;
-}
-
-function verificarResultado(num){
-    if(!verificando)return;
-
-    let t=getHoraBR();
-    let agora=new Date();
-    agora.setHours(t.h,t.m,t.s);
-
-    previsoes.forEach((p,i)=>{
-        let [h,m]=p.split(":").map(Number);
-        let inicio=new Date();inicio.setHours(h,m-1,0);
-        let fim=new Date();fim.setHours(h,m+1,59);
-
-        if(num===0 && agora>=inicio && agora<=fim){
-            historicoSinais[sinalAtualIndex].horarios[i].status="✅";
-        }
-    });
-
-    renderHistoricoSinais();
-}
-
-/* API BACKEND CORRIGIDA */
-let ultimoId=null;
-
-async function pegarResultados(){
-    try{
-        let res=await fetch("http://localhost:3000/blaze");
-
-        if(!res.ok){
-            document.getElementById("statusAPI").innerText="🔴 API Offline";
-            return;
+        // 🔥 REGRA: se for pedra 2 → tira 1 minuto
+        if(ehPedra2(baseRef)){
+            alvo.setMinutes(alvo.getMinutes() - 1);
         }
 
-        let data=await res.json();
+        const hora = alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'});
 
-        document.getElementById("statusAPI").innerText="🟢 API Conectada";
+        bufferSinais.push({hora});
 
-        if(!data || data.length === 0){
-            return;
+        if (bufferSinais.length === 2) {
+            sinais.push([...bufferSinais]);
+            bufferSinais = [];
         }
-
-        let ultimo=data[0];
-
-        if(ultimoId===ultimo.id) return;
-
-        ultimoId=ultimo.id;
-
-        clicar(ultimo.roll);
-
-    }catch(e){
-        document.getElementById("statusAPI").innerText="🔴 API Offline";
     }
+
+    render();
 }
 
-setInterval(pegarResultados,3000);
+// RESULTADO
+function mostrarResultado(txt,cor){
+    let el=document.getElementById("resultadoTela");
+    el.className=cor;
+    el.innerText=txt;
+    el.style.display="flex";
+    setTimeout(()=>el.style.display="none",3000);
+}
 
-/* RELÓGIO */
-setInterval(()=>{
-    let t=getHoraBR();
-    document.getElementById("hora").innerText=
-    `${String(t.h).padStart(2,"0")}:${String(t.m).padStart(2,"0")}:${String(t.s).padStart(2,"0")}`;
-},1000);
+// STATS
+function atualizarStats(){
+    document.getElementById("wins").innerText=wins;
+    document.getElementById("loss").innerText=loss;
+    let t=wins+loss;
+    document.getElementById("assert").innerText=t?((wins/t)*100).toFixed(1)+"%":"0%";
+}
 
+// RENDER
+function render(){
+    const lista=historico.slice(-20);
+
+    document.getElementById("historico").innerHTML=
+        lista.map(r=>
+            `<div class="bolinha ${r.cor==0?'b-branco':r.cor==1?'b-vermelho':'b-preto'}">${r.numero}</div>`
+        ).join("");
+
+    document.getElementById("sinais").innerHTML=
+        sinais.map(par=>
+            `<div class="sinal">⚪ ${par[0].hora} | ${par[1].hora}</div>`
+        ).join("");
+}
 </script>
+
 </body>
 </html>
