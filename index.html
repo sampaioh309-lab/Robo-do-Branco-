@@ -115,21 +115,12 @@ body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
 <script>
 let historico = [];
 let sinais = [];
-let bufferSinais = [];
+
+let pedra1 = null;
+let pedra2 = null;
 
 let wins = 0;
 let loss = 0;
-
-// NOTIFICAÇÃO
-if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-}
-
-function notificar(msg) {
-    if (Notification.permission === "granted") {
-        new Notification("🤖 Hunter Branco", { body: msg });
-    }
-}
 
 // RELÓGIO
 function atualizarRelogio() {
@@ -138,18 +129,6 @@ function atualizarRelogio() {
 }
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
-
-// REGRA
-function podeGerarSinal() {
-    let d = new Date(), m = d.getMinutes(), s = d.getSeconds();
-    return (m % 10 === 9 && s >= 30) || (m % 10 === 0 && s <= 5);
-}
-
-// 🔥 IDENTIFICAR PEDRA 2
-function ehPedra2(data){
-    const s = data.getSeconds();
-    return (s >= 45 || s <= 14);
-}
 
 // ABRIR NÚMEROS
 function abrirNumeros(cor) {
@@ -165,62 +144,75 @@ function abrirNumeros(cor) {
     document.getElementById("modal").style.display = "flex";
 }
 
-// ADD (🔥 ALTERAÇÃO AQUI)
+// ADD (LÓGICA FINAL)
 function add(cor, numero) {
 
     document.getElementById("modal").style.display = "none";
 
-    const agoraReal = new Date();
+    const agora = new Date();
+    const m = agora.getMinutes();
+    const s = agora.getSeconds();
 
-    historico.push({ cor, numero, hora: agoraReal });
+    historico.push({ cor, numero, hora: agora });
 
     if (historico.length > 100) historico.shift();
 
-    if (cor !== 0 && podeGerarSinal()) {
+    const termino9 = (m % 10 === 9);
+    const termino0 = (m % 10 === 0);
 
-        const baseRef = historico[historico.length - 1].hora;
-        const base = new Date(baseRef);
+    // PEDRA 1
+    if (cor !== 0 && termino9 && s >= 15 && s <= 45) {
+
+        let base = new Date(agora);
+        base.setSeconds(0);
+        base.setMilliseconds(0);
+        base.setMinutes(base.getMinutes() + 1);
+
+        let alvo = new Date(base.getTime() + numero * 60000);
+
+        pedra1 = {
+            hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}),
+            numero: numero
+        };
+    }
+
+    // PEDRA 2
+    else if (cor !== 0 && (
+        (termino9 && s > 45) ||
+        (termino0 && s <= 15)
+    )) {
+
+        let base = new Date(agora);
+
+        if (termino9) {
+            base.setMinutes(base.getMinutes() + 1);
+        }
 
         base.setSeconds(0);
         base.setMilliseconds(0);
 
-        base.setMinutes(base.getMinutes() + 1);
+        let alvo = new Date(base.getTime() + numero * 60000);
 
-        const alvo = new Date(base.getTime() + numero * 60000);
+        pedra2 = {
+            hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}),
+            numero: numero
+        };
+    }
 
-        // 🔥 REGRA: se for pedra 2 → tira 1 minuto
-        if(ehPedra2(baseRef)){
-            alvo.setMinutes(alvo.getMinutes() - 1);
+    // GERAR SINAL
+    if (pedra1 && pedra2) {
+
+        if (pedra1.numero === pedra2.numero) {
+            sinais.push([{hora: pedra1.hora}]);
+        } else {
+            sinais.push([{hora: pedra1.hora}, {hora: pedra2.hora}]);
         }
 
-        const hora = alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'});
-
-        bufferSinais.push({hora});
-
-        if (bufferSinais.length === 2) {
-            sinais.push([...bufferSinais]);
-            bufferSinais = [];
-        }
+        pedra1 = null;
+        pedra2 = null;
     }
 
     render();
-}
-
-// RESULTADO
-function mostrarResultado(txt,cor){
-    let el=document.getElementById("resultadoTela");
-    el.className=cor;
-    el.innerText=txt;
-    el.style.display="flex";
-    setTimeout(()=>el.style.display="none",3000);
-}
-
-// STATS
-function atualizarStats(){
-    document.getElementById("wins").innerText=wins;
-    document.getElementById("loss").innerText=loss;
-    let t=wins+loss;
-    document.getElementById("assert").innerText=t?((wins/t)*100).toFixed(1)+"%":"0%";
 }
 
 // RENDER
@@ -233,9 +225,13 @@ function render(){
         ).join("");
 
     document.getElementById("sinais").innerHTML=
-        sinais.map(par=>
-            `<div class="sinal">⚪ ${par[0].hora} | ${par[1].hora}</div>`
-        ).join("");
+        sinais.map(par=>{
+            if(par.length === 1){
+                return `<div class="sinal">⚪ ${par[0].hora}</div>`;
+            }else{
+                return `<div class="sinal">⚪ ${par[0].hora} | ${par[1].hora}</div>`;
+            }
+        }).join("");
 }
 </script>
 
