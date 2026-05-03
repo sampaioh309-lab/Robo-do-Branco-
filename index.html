@@ -1,286 +1,318 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hunter Branco AUTO PRO</title>
-
-<style>
-body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
-
-.container {
-    width:100%;
-    max-width:900px;
-    margin:auto;
-    padding:10px;
-}
-
-.card { background:#0f172a; margin:10px; padding:15px; border-radius:10px; }
-
-.relogio { font-size:20px; font-weight:bold; color:#38bdf8; margin-top:10px; }
-
-#historico {
-    display:flex;
-    overflow-x:auto;
-}
-
-.bolinha {
-    width:32px; height:32px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:bold; margin:3px; font-size:14px;
-}
-
-.b-vermelho { background:#ef4444; }
-.b-preto { background:#111; }
-.b-branco { background:#fff; color:#000; box-shadow:0 0 6px #fff; }
-
-.sinal { background:#1e293b; margin:5px; padding:10px; border-radius:8px; }
-
-.green { color:#22c55e; }
-.red { color:#ef4444; }
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h1>🤖 HUNTER BRANCO AUTO PRO</h1>
-<div class="relogio" id="relogio">--:--:--</div>
-
-<div class="card">
-<h2>Histórico</h2>
-<div id="historico"></div>
-</div>
-
-<div class="card">
-<h2>Sinais</h2>
-<div id="sinais"></div>
-</div>
-
-<div class="card">
-<h2>Estatísticas</h2>
-<div>Wins: <span id="wins">0</span></div>
-<div>Loss: <span id="loss">0</span></div>
-<div>Assertividade: <span id="assert">0%</span></div>
-</div>
+<!DOCTYPE html>  
+<html lang="pt-BR">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Hunter Branco Manual PRO</title>  
+
+<style>  
+body { background:#020617; color:#fff; font-family:Arial; text-align:center; }  
+
+.container {  
+    width:100%;  
+    max-width:900px;  
+    margin:auto;  
+    padding:10px;  
+}  
+
+.btn {  
+    font-size:30px; padding:15px; margin:5px;  
+    border:none; border-radius:10px; cursor:pointer;  
+}  
+
+.vermelho { background:#ef4444; }  
+.preto { background:#111; color:#fff; }  
+.branco { background:#fff; color:#000; }  
+
+.numero-btn { padding:10px; margin:5px; border-radius:8px; border:none; cursor:pointer; }  
+
+.card { background:#0f172a; margin:10px; padding:15px; border-radius:10px; }  
+
+.sinal { background:#1e293b; margin:5px; padding:10px; border-radius:8px; }  
+
+.win { color:#22c55e; }  
+.loss { color:#ef4444; }  
+
+.relogio { font-size:20px; font-weight:bold; color:#38bdf8; margin-top:10px; }  
+
+#historico {  
+    display:flex;  
+    justify-content:flex-start;  
+    flex-wrap:nowrap;  
+    overflow-x:auto;  
+}  
+
+.bolinha {  
+    width:32px; height:32px; border-radius:50%;  
+    display:inline-flex; align-items:center; justify-content:center;  
+    font-weight:bold; margin:3px; font-size:14px;  
+}  
+
+.b-vermelho { background:#ef4444; color:#fff; }  
+.b-preto { background:#111; color:#fff; }  
+.b-branco { background:#fff; color:#000; box-shadow:0 0 6px #fff; }  
+
+.modal {  
+    position:fixed; top:0; left:0;  
+    width:100%; height:100%;  
+    background:rgba(0,0,0,0.8);  
+    display:none; justify-content:center; align-items:center;  
+}  
+
+.modal-content { background:#0f172a; padding:20px; border-radius:10px; }  
+
+#resultadoTela {  
+    position:fixed;  
+    top:0;  
+    left:0;  
+    width:100%;  
+    height:100%;  
+    display:none;  
+    justify-content:center;  
+    align-items:center;  
+    font-size:80px;  
+    font-weight:bold;  
+    z-index:9999;  
+}  
+
+.green { color:#22c55e; }  
+.red { color:#ef4444; }  
+</style>  
+</head>  
+
+<body>  
+
+<div class="container">  
+
+<h1>🤖 HUNTER BRANCO MANUAL PRO</h1>  
+<div class="relogio" id="relogio">--:--:--</div>  
+
+<div class="card">  
+    <h2>Registrar Jogada</h2>  
+    <button class="btn vermelho" onclick="abrirNumeros(1)">🔴</button>  
+    <button class="btn preto" onclick="abrirNumeros(2)">⚫</button>  
+    <button class="btn branco" onclick="add(0,0)">⚪</button>  
+</div>  
+
+<div class="card">  
+    <h2>Histórico</h2>  
+    <div id="historico"></div>  
+</div>  
+
+<div class="card">  
+    <h2>Sinais</h2>  
+    <div id="sinais"></div>  
+</div>  
 
-</div>
+<div class="card">  
+    <h2>Estatísticas</h2>  
+    <div>Wins: <span id="wins">0</span></div>  
+    <div>Loss: <span id="loss">0</span></div>  
+    <div>Assertividade: <span id="assert">0%</span></div>  
+</div>  
 
-<script>
+</div>  
 
-let historico = [];
-let sinais = [];
-let pedra1 = null;
-let pedra2 = null;
-let wins = 0;
-let loss = 0;
+<div id="modal" class="modal">  
+    <div class="modal-content" id="numeros"></div>  
+</div>  
 
-// RELÓGIO
-function atualizarRelogio() {
-    const horaBR = new Date().toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo"});
-    document.getElementById("relogio").innerText = horaBR;
-}
-setInterval(atualizarRelogio,1000);
-atualizarRelogio();
-
-// PROCESSAR RESULTADO
-function processarResultadoBlaze(numero){
-    let cor;
-    if(numero === 0) cor = 0;
-    else if(numero <= 7) cor = 1;
-    else cor = 2;
+<div id="resultadoTela"></div>  
 
-    add(cor, numero);
-}
+<script>  
+let historico = [];  
+let sinais = [];  
 
-// MARGEM
-function dentroDaMargem(horarioSinal, agora){
-    let [h,m] = horarioSinal.split(":").map(Number)
-    let base = new Date(agora)
-    base.setHours(h)
-    base.setMinutes(m)
-    base.setSeconds(0)
+let pedra1 = null;  
+let pedra2 = null;  
 
-    let antes = new Date(base.getTime() - 60000)
-    let depois = new Date(base.getTime() + 60000)
+let wins = 0;  
+let loss = 0;  
 
-    return agora >= antes && agora <= depois
-}
+// RELÓGIO  
+function atualizarRelogio() {  
+    const horaBR = new Date().toLocaleTimeString("pt-BR",{timeZone:"America/Sao_Paulo"});  
+    document.getElementById("relogio").innerText = horaBR;  
+}  
+setInterval(atualizarRelogio,1000);  
+atualizarRelogio();  
 
-// ADD (sua lógica original)
-function add(cor, numero) {
+// MARGEM  
+function dentroDaMargem(horarioSinal, agora){  
+    let [h,m] = horarioSinal.split(":").map(Number)  
 
-    const agora = new Date();
-    const m = agora.getMinutes();
-    const s = agora.getSeconds();
+    let base = new Date(agora)  
+    base.setHours(h)  
+    base.setMinutes(m)  
+    base.setSeconds(0)  
 
-    historico.push({ cor, numero, hora: agora });
-    if (historico.length > 100) historico.shift();
+    let antes = new Date(base.getTime() - 60000)  
+    let depois = new Date(base.getTime() + 60000)  
 
-    // GREEN
-    if(cor === 0 && sinais.length > 0){
-        let ultimo = sinais[sinais.length - 1]
+    return agora >= antes && agora <= depois  
+}  
 
-        if(!ultimo.resolvido){
-            let bateu = ultimo.horarios.some(h => dentroDaMargem(h, agora))
+// ABRIR NÚMEROS  
+function abrirNumeros(cor) {  
+    let html = "<h3>Escolha o número</h3>";  
+    let inicio = cor === 1 ? 1 : 8;  
+    let fim = cor === 1 ? 7 : 14;  
 
-            if(bateu){
-                ultimo.resolvido = true
-                ultimo.resultado = "green"
-                wins++
-                document.getElementById("wins").innerText = wins
-            }
-        }
-    }
+    for (let i = inicio; i <= fim; i++) {  
+        html += `<button class="numero-btn" onclick="add(${cor}, ${i})">${i}</button>`;  
+    }  
 
-    const termino9 = (m % 10 === 9);
-    const termino0 = (m % 10 === 0);
+    document.getElementById("numeros").innerHTML = html;  
+    document.getElementById("modal").style.display = "flex";  
+}  
 
-    if (cor !== 0 && termino9 && s >= 15 && s <= 45) {
+// ADD  
+function add(cor, numero) {  
 
-        let base = new Date(agora);
-        base.setSeconds(0);
-        base.setMilliseconds(0);
-        base.setMinutes(base.getMinutes() + 1);
+    document.getElementById("modal").style.display = "none";  
 
-        let alvo = new Date(base.getTime() + numero * 60000);
+    const agora = new Date();  
+    const m = agora.getMinutes();  
+    const s = agora.getSeconds();  
 
-        pedra1 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
-    }
+    historico.push({ cor, numero, hora: agora });  
 
-    else if (cor !== 0 && ((termino9 && s > 45) || (termino0 && s <= 15))) {
+    if (historico.length > 100) historico.shift();  
 
-        let base = new Date(agora);
+    // GREEN no branco  
+    if(cor === 0 && sinais.length > 0){  
+        let ultimo = sinais[sinais.length - 1]  
 
-        if (termino9) base.setMinutes(base.getMinutes() + 1);
+        if(!ultimo.resolvido){  
+            let bateu = ultimo.horarios.some(h => dentroDaMargem(h, agora))  
 
-        base.setSeconds(0);
-        base.setMilliseconds(0);
+            if(bateu){  
+                ultimo.resolvido = true  
+                ultimo.resultado = "green"  
+                wins++  
+                document.getElementById("wins").innerText = wins  
+            }  
+        }  
+    }  
 
-        let alvo = new Date(base.getTime() + numero * 60000);
+    const termino9 = (m % 10 === 9);  
+    const termino0 = (m % 10 === 0);  
 
-        pedra2 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
-    }
+    if (cor !== 0 && termino9 && s >= 15 && s <= 45) {  
 
-    if (pedra1 || pedra2) {
+        let base = new Date(agora);  
+        base.setSeconds(0);  
+        base.setMilliseconds(0);  
+        base.setMinutes(base.getMinutes() + 1);  
 
-        let lista = [];
+        let alvo = new Date(base.getTime() + numero * 60000);  
 
-        if (pedra1 && pedra1.numero !== 0) {
-            lista.push({hora: pedra1.hora});
-        }
+        pedra1 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };  
+    }  
 
-        if (pedra2 && pedra2.numero !== 0) {
-            if (!pedra1 || pedra1.numero !== pedra2.numero) {
-                lista.push({hora: pedra2.hora});
-            }
-        }
+    else if (cor !== 0 && ((termino9 && s > 45) || (termino0 && s <= 15))) {  
 
-        if (lista.length > 0) {
-            sinais.push({
-                horarios: lista.map(p => p.hora),
-                resolvido: false,
-                resultado: null
-            });
-        }
+        let base = new Date(agora);  
 
-        pedra1 = null;
-        pedra2 = null;
-    }
+        if (termino9) base.setMinutes(base.getMinutes() + 1);  
 
-    render();
-}
+        base.setSeconds(0);  
+        base.setMilliseconds(0);  
 
-// LOSS
-setInterval(()=>{
-    let agora = new Date()
+        let alvo = new Date(base.getTime() + numero * 60000);  
 
-    sinais.forEach(s => {
-        if(s.resolvido) return
+        pedra2 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };  
+    }  
 
-        let passou = s.horarios.every(h => {
-            let [hh,mm] = h.split(":").map(Number)
-            let base = new Date()
-            base.setHours(hh)
-            base.setMinutes(mm)
-            base.setSeconds(0)
+    // GERAR SINAL  
+    if (pedra1 || pedra2) {  
 
-            let limite = new Date(base.getTime() + 60000)
-            return agora > limite
-        })
+        let lista = [];  
 
-        if(passou){
-            s.resolvido = true
-            s.resultado = "loss"
-            loss++
-            document.getElementById("loss").innerText = loss
-        }
-    })
+        if (pedra1 && pedra1.numero !== 0) {  
+            lista.push({hora: pedra1.hora, numero: pedra1.numero});  
+        }  
 
-    atualizarAssertividade();
+        if (pedra2 && pedra2.numero !== 0) {  
+            if (!pedra1 || pedra1.numero !== pedra2.numero) {  
+                lista.push({hora: pedra2.hora, numero: pedra2.numero});  
+            }  
+        }  
 
-},1000)
+        if (lista.length > 0) {  
+            sinais.push({  
+                horarios: lista.map(p => p.hora),  
+                resolvido: false,  
+                resultado: null  
+            });  
+        }  
 
-// ASSERTIVIDADE
-function atualizarAssertividade(){
-    let total = wins + loss;
-    let perc = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
-    document.getElementById("assert").innerText = perc + "%";
-}
+        pedra1 = null;  
+        pedra2 = null;  
+    }  
 
-// RENDER
-function render(){
-    const lista=historico.slice(-20);
+    render();  
+}  
 
-    document.getElementById("historico").innerHTML=
-        lista.map(r=>
-            `<div class="bolinha ${r.cor==0?'b-branco':r.cor==1?'b-vermelho':'b-preto'}">${r.numero}</div>`
-        ).join("");
+// LOSS automático  
+setInterval(()=>{  
 
-    document.getElementById("sinais").innerHTML=
-        sinais.map(par=>{
-            let status = par.resolvido ? (par.resultado === "green" ? "✅" : "❌") : "";
-            return `<div class="sinal">${status} ⚪ ${par.horarios.join(" | ")}</div>`;
-        }).join("");
-}
+    let agora = new Date()  
 
-// 🔥 CONEXÃO DIRETA COM BLAZE (TEMPO REAL)
-function conectarBlaze(){
+    sinais.forEach(s => {  
 
-    const socket = new WebSocket("wss://api-v2.blaze.com/roulette_games/realtime");
+        if(s.resolvido) return  
 
-    socket.onopen = () => {
-        console.log("Conectado na Blaze");
-    };
+        let passou = s.horarios.every(h => {  
+            let [hh,mm] = h.split(":").map(Number)  
 
-    socket.onmessage = (event) => {
-        try{
-            const data = JSON.parse(event.data);
+            let base = new Date()  
+            base.setHours(hh)  
+            base.setMinutes(mm)  
+            base.setSeconds(0)  
 
-            if(data && data.roll !== undefined){
-                processarResultadoBlaze(data.roll);
-            }
+            let limite = new Date(base.getTime() + 60000)  
 
-        }catch(e){
-            console.log("Erro ao ler dados", e);
-        }
-    };
+            return agora > limite  
+        })  
 
-    socket.onerror = (err) => {
-        console.log("Erro socket", err);
-    };
+        if(passou){  
+            s.resolvido = true  
+            s.resultado = "loss"  
+            loss++  
+            document.getElementById("loss").innerText = loss  
+        }  
 
-    socket.onclose = () => {
-        console.log("Reconectando...");
-        setTimeout(conectarBlaze, 3000);
-    };
-}
+    })  
 
-// INICIAR
-conectarBlaze();
+},1000)  
 
-</script>
+// RENDER  
+function render(){  
+    const lista=historico.slice(-20);  
 
-</body>
+    document.getElementById("historico").innerHTML=  
+        lista.map(r=>  
+            `<div class="bolinha ${r.cor==0?'b-branco':r.cor==1?'b-vermelho':'b-preto'}">${r.numero}</div>`  
+        ).join("");  
+
+    document.getElementById("sinais").innerHTML=  
+        sinais.map(par=>{  
+            let h = par.horarios  
+
+            let status = ""  
+            if(par.resolvido){  
+                status = par.resultado === "green" ? "✅" : "❌"  
+            }  
+
+            if(h.length === 1){  
+                return `<div class="sinal">${status} ⚪ ${h[0]}</div>`;  
+            }else{  
+                return `<div class="sinal">${status} ⚪ ${h[0]} | ${h[1]}</div>`;  
+            }  
+        }).join("");  
+}  
+</script>  
+
+</body>  
 </html>
