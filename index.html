@@ -211,13 +211,23 @@ function add(cor, numero) {
         };
     }
 
-    // GERAR SINAL
-    if (pedra1 && pedra2) {
+    // 🔥 GERAR SINAL (IGNORANDO BRANCO)
+    if (pedra1 || pedra2) {
 
-        if (pedra1.numero === pedra2.numero) {
-            sinais.push([{hora: pedra1.hora}]);
-        } else {
-            sinais.push([{hora: pedra1.hora}, {hora: pedra2.hora}]);
+        let lista = [];
+
+        if (pedra1 && pedra1.numero !== 0) {
+            lista.push({hora: pedra1.hora, numero: pedra1.numero});
+        }
+
+        if (pedra2 && pedra2.numero !== 0) {
+            if (!pedra1 || pedra1.numero !== pedra2.numero) {
+                lista.push({hora: pedra2.hora, numero: pedra2.numero});
+            }
+        }
+
+        if (lista.length > 0) {
+            sinais.push(lista.map(p => ({hora: p.hora})));
         }
 
         pedra1 = null;
