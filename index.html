@@ -190,6 +190,7 @@ function add(cor, numero) {
 
             if(bateu){
                 ultimo.resolvido = true
+                ultimo.resultado = "green"
                 wins++
                 document.getElementById("wins").innerText = wins
             }
@@ -225,7 +226,7 @@ function add(cor, numero) {
         pedra2 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
     }
 
-    // GERAR SINAL (ignorando branco)
+    // GERAR SINAL
     if (pedra1 || pedra2) {
 
         let lista = [];
@@ -243,7 +244,8 @@ function add(cor, numero) {
         if (lista.length > 0) {
             sinais.push({
                 horarios: lista.map(p => p.hora),
-                resolvido: false
+                resolvido: false,
+                resultado: null
             });
         }
 
@@ -278,6 +280,7 @@ setInterval(()=>{
 
         if(passou){
             s.resolvido = true
+            s.resultado = "loss"
             loss++
             document.getElementById("loss").innerText = loss
         }
@@ -298,10 +301,16 @@ function render(){
     document.getElementById("sinais").innerHTML=
         sinais.map(par=>{
             let h = par.horarios
+
+            let status = ""
+            if(par.resolvido){
+                status = par.resultado === "green" ? "✅" : "❌"
+            }
+
             if(h.length === 1){
-                return `<div class="sinal">⚪ ${h[0]}</div>`;
+                return `<div class="sinal">${status} ⚪ ${h[0]}</div>`;
             }else{
-                return `<div class="sinal">⚪ ${h[0]} | ${h[1]}</div>`;
+                return `<div class="sinal">${status} ⚪ ${h[0]} | ${h[1]}</div>`;
             }
         }).join("");
 }
