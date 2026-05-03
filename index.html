@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- 🔥 CORREÇÃO RESPONSIVIDADE -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Hunter Branco Manual PRO</title>
@@ -11,7 +10,6 @@
 <style>
 body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
 
-/* 🔥 CORREÇÃO AQUI */
 .container {
     width:100%;
     max-width:900px;
@@ -39,7 +37,6 @@ body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
 
 .relogio { font-size:20px; font-weight:bold; color:#38bdf8; margin-top:10px; }
 
-/* 🔥 CORREÇÃO AQUI */
 #historico {
     display:flex;
     justify-content:flex-start;
@@ -142,6 +139,21 @@ function atualizarRelogio() {
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
 
+// MARGEM
+function dentroDaMargem(horarioSinal, agora){
+    let [h,m] = horarioSinal.split(":").map(Number)
+
+    let base = new Date(agora)
+    base.setHours(h)
+    base.setMinutes(m)
+    base.setSeconds(0)
+
+    let antes = new Date(base.getTime() - 60000)
+    let depois = new Date(base.getTime() + 60000)
+
+    return agora >= antes && agora <= depois
+}
+
 // ABRIR NÚMEROS
 function abrirNumeros(cor) {
     let html = "<h3>Escolha o número</h3>";
@@ -169,10 +181,24 @@ function add(cor, numero) {
 
     if (historico.length > 100) historico.shift();
 
+    // GREEN no branco
+    if(cor === 0 && sinais.length > 0){
+        let ultimo = sinais[sinais.length - 1]
+
+        if(!ultimo.resolvido){
+            let bateu = ultimo.horarios.some(h => dentroDaMargem(h, agora))
+
+            if(bateu){
+                ultimo.resolvido = true
+                wins++
+                document.getElementById("wins").innerText = wins
+            }
+        }
+    }
+
     const termino9 = (m % 10 === 9);
     const termino0 = (m % 10 === 0);
 
-    // PEDRA 1
     if (cor !== 0 && termino9 && s >= 15 && s <= 45) {
 
         let base = new Date(agora);
@@ -182,36 +208,24 @@ function add(cor, numero) {
 
         let alvo = new Date(base.getTime() + numero * 60000);
 
-        pedra1 = {
-            hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}),
-            numero: numero
-        };
+        pedra1 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
     }
 
-    // PEDRA 2
-    else if (cor !== 0 && (
-        (termino9 && s > 45) ||
-        (termino0 && s <= 15)
-    )) {
+    else if (cor !== 0 && ((termino9 && s > 45) || (termino0 && s <= 15))) {
 
         let base = new Date(agora);
 
-        if (termino9) {
-            base.setMinutes(base.getMinutes() + 1);
-        }
+        if (termino9) base.setMinutes(base.getMinutes() + 1);
 
         base.setSeconds(0);
         base.setMilliseconds(0);
 
         let alvo = new Date(base.getTime() + numero * 60000);
 
-        pedra2 = {
-            hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}),
-            numero: numero
-        };
+        pedra2 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
     }
 
-    // 🔥 GERAR SINAL (IGNORANDO BRANCO)
+    // GERAR SINAL (ignorando branco)
     if (pedra1 || pedra2) {
 
         let lista = [];
@@ -227,7 +241,10 @@ function add(cor, numero) {
         }
 
         if (lista.length > 0) {
-            sinais.push(lista.map(p => ({hora: p.hora})));
+            sinais.push({
+                horarios: lista.map(p => p.hora),
+                resolvido: false
+            });
         }
 
         pedra1 = null;
@@ -236,6 +253,38 @@ function add(cor, numero) {
 
     render();
 }
+
+// LOSS automático
+setInterval(()=>{
+
+    let agora = new Date()
+
+    sinais.forEach(s => {
+
+        if(s.resolvido) return
+
+        let passou = s.horarios.every(h => {
+            let [hh,mm] = h.split(":").map(Number)
+
+            let base = new Date()
+            base.setHours(hh)
+            base.setMinutes(mm)
+            base.setSeconds(0)
+
+            let limite = new Date(base.getTime() + 60000)
+
+            return agora > limite
+        })
+
+        if(passou){
+            s.resolvido = true
+            loss++
+            document.getElementById("loss").innerText = loss
+        }
+
+    })
+
+},1000)
 
 // RENDER
 function render(){
@@ -248,10 +297,11 @@ function render(){
 
     document.getElementById("sinais").innerHTML=
         sinais.map(par=>{
-            if(par.length === 1){
-                return `<div class="sinal">⚪ ${par[0].hora}</div>`;
+            let h = par.horarios
+            if(h.length === 1){
+                return `<div class="sinal">⚪ ${h[0]}</div>`;
             }else{
-                return `<div class="sinal">⚪ ${par[0].hora} | ${par[1].hora}</div>`;
+                return `<div class="sinal">⚪ ${h[0]} | ${h[1]}</div>`;
             }
         }).join("");
 }
