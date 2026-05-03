@@ -2,10 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Hunter Branco Manual PRO</title>
+<title>Hunter Branco AUTO PRO</title>
 
 <style>
 body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
@@ -17,65 +15,26 @@ body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
     padding:10px;
 }
 
-.btn {
-    font-size:30px; padding:15px; margin:5px;
-    border:none; border-radius:10px; cursor:pointer;
-}
-
-.vermelho { background:#ef4444; }
-.preto { background:#111; color:#fff; }
-.branco { background:#fff; color:#000; }
-
-.numero-btn { padding:10px; margin:5px; border-radius:8px; border:none; cursor:pointer; }
-
 .card { background:#0f172a; margin:10px; padding:15px; border-radius:10px; }
-
-.sinal { background:#1e293b; margin:5px; padding:10px; border-radius:8px; }
-
-.win { color:#22c55e; }
-.loss { color:#ef4444; }
 
 .relogio { font-size:20px; font-weight:bold; color:#38bdf8; margin-top:10px; }
 
 #historico {
     display:flex;
-    justify-content:flex-start;
-    flex-wrap:nowrap;
     overflow-x:auto;
 }
 
 .bolinha {
     width:32px; height:32px; border-radius:50%;
-    display:inline-flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     font-weight:bold; margin:3px; font-size:14px;
 }
 
-.b-vermelho { background:#ef4444; color:#fff; }
-.b-preto { background:#111; color:#fff; }
+.b-vermelho { background:#ef4444; }
+.b-preto { background:#111; }
 .b-branco { background:#fff; color:#000; box-shadow:0 0 6px #fff; }
 
-.modal {
-    position:fixed; top:0; left:0;
-    width:100%; height:100%;
-    background:rgba(0,0,0,0.8);
-    display:none; justify-content:center; align-items:center;
-}
-
-.modal-content { background:#0f172a; padding:20px; border-radius:10px; }
-
-#resultadoTela {
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    display:none;
-    justify-content:center;
-    align-items:center;
-    font-size:80px;
-    font-weight:bold;
-    z-index:9999;
-}
+.sinal { background:#1e293b; margin:5px; padding:10px; border-radius:8px; }
 
 .green { color:#22c55e; }
 .red { color:#ef4444; }
@@ -86,48 +45,34 @@ body { background:#020617; color:#fff; font-family:Arial; text-align:center; }
 
 <div class="container">
 
-<h1>🤖 HUNTER BRANCO MANUAL PRO</h1>
+<h1>🤖 HUNTER BRANCO AUTO PRO</h1>
 <div class="relogio" id="relogio">--:--:--</div>
 
 <div class="card">
-    <h2>Registrar Jogada</h2>
-    <button class="btn vermelho" onclick="abrirNumeros(1)">🔴</button>
-    <button class="btn preto" onclick="abrirNumeros(2)">⚫</button>
-    <button class="btn branco" onclick="add(0,0)">⚪</button>
+<h2>Histórico</h2>
+<div id="historico"></div>
 </div>
 
 <div class="card">
-    <h2>Histórico</h2>
-    <div id="historico"></div>
+<h2>Sinais</h2>
+<div id="sinais"></div>
 </div>
 
 <div class="card">
-    <h2>Sinais</h2>
-    <div id="sinais"></div>
-</div>
-
-<div class="card">
-    <h2>Estatísticas</h2>
-    <div>Wins: <span id="wins">0</span></div>
-    <div>Loss: <span id="loss">0</span></div>
-    <div>Assertividade: <span id="assert">0%</span></div>
+<h2>Estatísticas</h2>
+<div>Wins: <span id="wins">0</span></div>
+<div>Loss: <span id="loss">0</span></div>
+<div>Assertividade: <span id="assert">0%</span></div>
 </div>
 
 </div>
-
-<div id="modal" class="modal">
-    <div class="modal-content" id="numeros"></div>
-</div>
-
-<div id="resultadoTela"></div>
 
 <script>
+
 let historico = [];
 let sinais = [];
-
 let pedra1 = null;
 let pedra2 = null;
-
 let wins = 0;
 let loss = 0;
 
@@ -139,10 +84,19 @@ function atualizarRelogio() {
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
 
+// PROCESSAR RESULTADO
+function processarResultadoBlaze(numero){
+    let cor;
+    if(numero === 0) cor = 0;
+    else if(numero <= 7) cor = 1;
+    else cor = 2;
+
+    add(cor, numero);
+}
+
 // MARGEM
 function dentroDaMargem(horarioSinal, agora){
     let [h,m] = horarioSinal.split(":").map(Number)
-
     let base = new Date(agora)
     base.setHours(h)
     base.setMinutes(m)
@@ -154,34 +108,17 @@ function dentroDaMargem(horarioSinal, agora){
     return agora >= antes && agora <= depois
 }
 
-// ABRIR NÚMEROS
-function abrirNumeros(cor) {
-    let html = "<h3>Escolha o número</h3>";
-    let inicio = cor === 1 ? 1 : 8;
-    let fim = cor === 1 ? 7 : 14;
-
-    for (let i = inicio; i <= fim; i++) {
-        html += `<button class="numero-btn" onclick="add(${cor}, ${i})">${i}</button>`;
-    }
-
-    document.getElementById("numeros").innerHTML = html;
-    document.getElementById("modal").style.display = "flex";
-}
-
-// ADD
+// ADD (sua lógica original)
 function add(cor, numero) {
-
-    document.getElementById("modal").style.display = "none";
 
     const agora = new Date();
     const m = agora.getMinutes();
     const s = agora.getSeconds();
 
     historico.push({ cor, numero, hora: agora });
-
     if (historico.length > 100) historico.shift();
 
-    // GREEN no branco
+    // GREEN
     if(cor === 0 && sinais.length > 0){
         let ultimo = sinais[sinais.length - 1]
 
@@ -226,18 +163,17 @@ function add(cor, numero) {
         pedra2 = { hora: alvo.toLocaleTimeString("pt-BR",{hour:'2-digit',minute:'2-digit'}), numero };
     }
 
-    // GERAR SINAL
     if (pedra1 || pedra2) {
 
         let lista = [];
 
         if (pedra1 && pedra1.numero !== 0) {
-            lista.push({hora: pedra1.hora, numero: pedra1.numero});
+            lista.push({hora: pedra1.hora});
         }
 
         if (pedra2 && pedra2.numero !== 0) {
             if (!pedra1 || pedra1.numero !== pedra2.numero) {
-                lista.push({hora: pedra2.hora, numero: pedra2.numero});
+                lista.push({hora: pedra2.hora});
             }
         }
 
@@ -256,25 +192,21 @@ function add(cor, numero) {
     render();
 }
 
-// LOSS automático
+// LOSS
 setInterval(()=>{
-
     let agora = new Date()
 
     sinais.forEach(s => {
-
         if(s.resolvido) return
 
         let passou = s.horarios.every(h => {
             let [hh,mm] = h.split(":").map(Number)
-
             let base = new Date()
             base.setHours(hh)
             base.setMinutes(mm)
             base.setSeconds(0)
 
             let limite = new Date(base.getTime() + 60000)
-
             return agora > limite
         })
 
@@ -284,10 +216,18 @@ setInterval(()=>{
             loss++
             document.getElementById("loss").innerText = loss
         }
-
     })
 
+    atualizarAssertividade();
+
 },1000)
+
+// ASSERTIVIDADE
+function atualizarAssertividade(){
+    let total = wins + loss;
+    let perc = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+    document.getElementById("assert").innerText = perc + "%";
+}
 
 // RENDER
 function render(){
@@ -300,20 +240,46 @@ function render(){
 
     document.getElementById("sinais").innerHTML=
         sinais.map(par=>{
-            let h = par.horarios
-
-            let status = ""
-            if(par.resolvido){
-                status = par.resultado === "green" ? "✅" : "❌"
-            }
-
-            if(h.length === 1){
-                return `<div class="sinal">${status} ⚪ ${h[0]}</div>`;
-            }else{
-                return `<div class="sinal">${status} ⚪ ${h[0]} | ${h[1]}</div>`;
-            }
+            let status = par.resolvido ? (par.resultado === "green" ? "✅" : "❌") : "";
+            return `<div class="sinal">${status} ⚪ ${par.horarios.join(" | ")}</div>`;
         }).join("");
 }
+
+// 🔥 CONEXÃO DIRETA COM BLAZE (TEMPO REAL)
+function conectarBlaze(){
+
+    const socket = new WebSocket("wss://api-v2.blaze.com/roulette_games/realtime");
+
+    socket.onopen = () => {
+        console.log("Conectado na Blaze");
+    };
+
+    socket.onmessage = (event) => {
+        try{
+            const data = JSON.parse(event.data);
+
+            if(data && data.roll !== undefined){
+                processarResultadoBlaze(data.roll);
+            }
+
+        }catch(e){
+            console.log("Erro ao ler dados", e);
+        }
+    };
+
+    socket.onerror = (err) => {
+        console.log("Erro socket", err);
+    };
+
+    socket.onclose = () => {
+        console.log("Reconectando...");
+        setTimeout(conectarBlaze, 3000);
+    };
+}
+
+// INICIAR
+conectarBlaze();
+
 </script>
 
 </body>
